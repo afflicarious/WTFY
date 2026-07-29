@@ -266,6 +266,31 @@
             }
         }
 
+        /* BUBBLES */
+        #bubbleContainer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none; /* bubbles won't block interactions */
+            overflow: visible;
+            z-index: -1;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -120px; /* start off-screen */
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.06) 60%);
+            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: inset 0 -6px 12px rgba(0,0,0,0.18), 0 8px 24px rgba(102,126,234,0.06);
+            will-change: transform, opacity;
+            opacity: 0.95;
+            transform-origin: center;
+        }
+
+        .bubble-popping {
+            animation: popBubble 260ms cubic-bezier(.2,.8,.2,1) forwards;
+        }
+
         /* Glow styling */
         .name,
         .bio,
@@ -411,13 +436,17 @@
     </audio>
 
     <!-- Background video -->
-    <video id="bgVideo" autoplay muted playsinline loop>
+    <!-- Removed autoplay so playback and unmute happen only after user interaction -->
+    <video id="bgVideo" muted playsinline loop>
         <source src="Cowboy.mp4" type="video/mp4">
         Your browser does not support the video element.
     </video>
 
     <div class="petal-container" id="petalContainer"></div>
     <div class="petal-stack" id="petalStack"></div>
+
+    <!-- Bubble container -->
+    <div id="bubbleContainer"></div>
 
     <!-- Full-screen landing overlay -->
     <div id="splashScreen">
@@ -467,9 +496,11 @@
         function enterApp() {
             splashScreen.classList.add('hidden');
             if (!started) {
+                // Unmute and play the video after a user gesture
                 video.muted = false;
                 video.play().catch(err => console.log('Play error:', err));
                 started = true;
+                startBubbles(); // start bubble animation system on enter
             }
         }
 
@@ -484,6 +515,7 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playPopSound() {
+            // keep the existing synthesized pop for petals
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
@@ -641,6 +673,137 @@
         document.addEventListener('touchend', () => {
             glassContainer.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
         });
+
+        // ===== BUBBLES SYSTEM =====
+        const bubbleContainer = document.getElementById('bubbleContainer');
+        const popAudio = document.getElementById('popSound');
+        let bubbleInterval = null;
+        const bubbles = [];
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+
+        function createBubble() {
+            const el = document.createElement('div');
+            el.className = 'bubble';
+            const size = Math.round(rand(14, 60));
+            el.style.width = `${size}px`;
+            el.style.height = `${size}px`;
+            // Start position somewhere along the bottom width
+            const startX = rand(6, window.innerWidth - 6 - size);
+            const startY = window.innerHeight + size + rand(0, 60);
+            const vx = rand(-0.03, 0.03) * window.innerWidth; // small horizontal drift
+            const vy = -rand(0.02, 0.09) * window.innerHeight; // upwards speed in px per ms
+            const wobble = rand(0.2, 1.2);
+            el.style.transform = `translate(${startX}px, ${startY}px)`;
+            bubbleContainer.appendChild(el);
+
+            const bubble = {
+                el,
+                x: startX,
+                y: startY,
+                vx,
+                vy,
+                size,
+                wobble,
+                created: performance.now(),
+                popping: false
+            };
+            bubbles.push(bubble);
+        }
+
+        function popBubble(bubble) {
+            if (bubble.popping) return;
+            bubble.popping = true;
+            bubble.el.classList.add('bubble-popping');
+            // Play pop audio if possible (user gesture exists after enter)
+            try {
+                popAudio.currentTime = 0;
+                const p = popAudio.play();
+                if (p && p.catch) p.catch(() => {/* ignore */});
+            } catch (e) {
+                // fallback to synthesized sound
+                playPopSound();
+            }
+            // remove after animation
+            setTimeout(() => {
+                if (bubble.el && bubble.el.parentElement) bubble.el.parentElement.removeChild(bubble.el);
+                const idx = bubbles.indexOf(bubble);
+                if (idx > -1) bubbles.splice(idx, 1);
+            }, 300);
+        }
+
+        let lastFrame = performance.now();
+        function update(now) {
+            const dt = Math.min(now - lastFrame, 40); // cap delta to avoid big jumps
+            lastFrame = now;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const b = bubbles[i];
+                if (b.popping) continue;
+                // simple physics
+                // horizontal gentle sinusoidal wobble + vx
+                b.x += b.vx * (dt / 16.67) + Math.sin((now + i * 100) * 0.002 * b.wobble) * 0.3 * b.size * (dt / 16.67);
+                b.y += b.vy * (dt / 16.67);
+
+                // slight scale/pulse to feel organic
+                const scale = 1 + Math.sin((now + i * 200) * 0.006) * 0.02;
+                b.el.style.transform = `translate(${b.x}px, ${b.y}px) scale(${scale})`;
+
+                // Remove if moved off the top
+                if (b.y + b.size < -80) {
+                    if (b.el && b.el.parentElement) b.el.parentElement.removeChild(b.el);
+                    bubbles.splice(i, 1);
+                    continue;
+                }
+
+                // Check corner collision (distance to each corner)
+                const cx = b.x + b.size / 2;
+                const cy = b.y + b.size / 2;
+                const corners = [
+                    {x: 0, y: 0},
+                    {x: w, y: 0},
+                    {x: 0, y: h},
+                    {x: w, y: h}
+                ];
+                for (const c of corners) {
+                    const dx = cx - c.x;
+                    const dy = cy - c.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    // threshold based on viewport diagonal and bubble size to feel natural
+                    const threshold = Math.max(48, Math.min(120, Math.hypot(w, h) * 0.04)) + b.size * 0.4;
+                    if (dist < threshold) {
+                        popBubble(b);
+                        break;
+                    }
+                }
+
+            }
+            requestAnimationFrame(update);
+        }
+
+        function startBubbles() {
+            if (bubbleInterval) return; // already running
+            // make sure there's at least the container
+            lastFrame = performance.now();
+            // spawn a bit faster on desktop, slower on mobile
+            const spawnRate = (window.innerWidth < 600) ? 900 : 520;
+            bubbleInterval = setInterval(() => {
+                // keep a reasonable number of bubbles
+                if (bubbles.length < 40) createBubble();
+            }, spawnRate);
+            requestAnimationFrame(update);
+        }
+
+        // Stop bubbles when tab hidden to save CPU
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (bubbleInterval) { clearInterval(bubbleInterval); bubbleInterval = null; }
+            } else {
+                startBubbles();
+            }
+        });
+
     </script>
 </body>
 </html>
