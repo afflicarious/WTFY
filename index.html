@@ -15,11 +15,11 @@
 
     /* Splash overlay - visible until user clicks */
     #splashScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:rgba(0,0,0,0.65);cursor:pointer}
-    #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.06)}
+    #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))}
     #splashScreen.hidden{display:none}
 
     /* Glass panel */
-    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:28px 20px;width:92%;max-width:460px;box-shadow:0 10px 50px rgba(138,43,226,0.12),0 4px 18px rgba(0,0,0,0.5);border:1px solid rgba(138,43,226,0.18)}
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center}
     /* Glow around the panel */
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
@@ -35,24 +35,18 @@
     @media(max-width:420px){.links-grid{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
 
-    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:#fff;border:1px solid rgba(255,255,255,0.06);font-weight:700;text-decoration:none;transition:transform .14s cubic-bezier(.2,.9,.3,1),box-shadow .14s,background .14s;opacity:0;transform:translateY(10px);}
+    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.95);text-decoration:none}
     .link-btn:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(138,43,226,0.12)}
     .link-btn.touch-press{transform:translateY(-1px) scale(.995);box-shadow:0 6px 18px rgba(138,43,226,0.08)}
 
-    /* Cherry blossom petals area */
-    #petalContainer{position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:-1}
-    .petal{position:absolute;top:-160px;width:36px;height:34px;border-radius:46% 54% 50% 50%/48% 48% 52% 52%;background:linear-gradient(180deg,#fff0f6,#ffd1e8);border:1px solid rgba(255,255,255,0.6);box-shadow:0 8px 18px rgba(0,0,0,0.18),inset 0 4px 8px rgba(255,255,255,0.35);filter:drop-shadow(0 8px 12px rgba(255,160,190,0.06));pointer-events:auto;cursor:pointer;will-change:transform,opacity}
+    /* Snowfall area */
+    #snowContainer{position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:-1}
+    .flake{position:absolute;top:-10vh;width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,0.92);box-shadow:0 2px 6px rgba(0,0,0,0.12);opacity:0.95;transform:translate3d(0,0,0)}
 
-    /* falling animation - translate Y to bottom and rotate */
-    @keyframes petalFall {to{transform:translate3d(var(--dx,0px),120vh,0) rotate(var(--rot,360deg));opacity:0.95}}
-
-    /* stacked petals at bottom */
-    .petal-stack{position:fixed;left:0;right:0;bottom:0;height:140px;pointer-events:auto;z-index:5;overflow:visible}
-    .stack-petal{position:absolute;bottom:0;width:34px;height:30px;border-radius:46% 54% 50% 50%;background:linear-gradient(180deg,#fff3f8,#ffcce2);border:1px solid rgba(255,255,255,0.5);box-shadow:0 6px 10px rgba(0,0,0,0.16);pointer-events:auto}
-
-    /* petal pop animation */
-    @keyframes petalPop{0%{transform:scale(1);opacity:1}50%{transform:scale(1.12)}100%{transform:scale(0);opacity:0}}
-    .petal-pop{animation:petalPop .28s cubic-bezier(.2,.8,.2,1) forwards}
+    /* falling animation: translate down and drift horizontally */
+    @keyframes snowFall {
+      to{transform:translate3d(var(--dx,0px),120vh,0) rotate(var(--rot,360deg));opacity:0.92}
+    }
 
     /* subtle shimmer on buttons/text when appear */
     @keyframes shimmer{0%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}50%{filter:drop-shadow(0 0 14px rgba(138,43,226,0.12))}100%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}}
@@ -60,14 +54,11 @@
   </style>
 </head>
 <body>
-  <audio id="popSound" preload="auto"><source src="pop.mp4" type="audio/mp4"></audio>
-
   <video id="bgVideo" muted playsinline loop>
     <source src="Cowboy.mp4" type="video/mp4">
   </video>
 
-  <div id="petalContainer" aria-hidden="true"></div>
-  <div class="petal-stack" id="petalStack" aria-hidden="false"></div>
+  <div id="snowContainer" aria-hidden="true"></div>
 
   <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
@@ -89,68 +80,51 @@
   </div>
 
   <script>
-    // --- Audio helpers ---
-    const popAudio = document.getElementById('popSound');
-    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    function synthPop(){ if(audioCtx.state==='suspended') audioCtx.resume(); const len=audioCtx.sampleRate*0.06; const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<len;i++){const p=i/len; d[i]=(Math.random()*2-1)*(1-p)*0.18} const s=audioCtx.createBufferSource(); s.buffer=buf; const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=900; s.connect(f).connect(audioCtx.destination); s.start(); }
-    function playPop(){ try{ popAudio.currentTime=0; const p=popAudio.play(); if(p&&p.catch) p.catch(()=>synthPop()); }catch(e){ synthPop(); } }
-
     // --- Elements ---
     const splash = document.getElementById('splashScreen');
     const video = document.getElementById('bgVideo');
-    const petalContainer = document.getElementById('petalContainer');
-    const petalStack = document.getElementById('petalStack');
+    const snowContainer = document.getElementById('snowContainer');
     const nameEl = document.getElementById('nameEl');
     const bioEl = document.getElementById('bioEl');
     const linkBtns = Array.from(document.querySelectorAll('.link-btn'));
 
     // entrance animations for text & buttons (staggered)
-    function staggerAppear(){ nameEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; nameEl.style.animationDelay='0.12s'; bioEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; bioEl.style.animationDelay='0.22s'; linkBtns.forEach((b,i)=>{ b.style.animation='appearUp .42s cubic-bezier(.2,.9,.2,1) forwards'; b.style.animationDelay=(0.32 + i*0.06)+'s'; }); }
-
-    // petal system
-    let running=false;
-    const petals=[];
-    function rand(min,max){return Math.random()*(max-min)+min}
-    function createPetal(){
-      const el=document.createElement('div'); el.className='petal';
-      const size=Math.round(rand(18,48)); el.style.width=size+'px'; el.style.height=Math.round(size*0.86)+'px';
-      const startX=Math.round(rand(6,window.innerWidth-size-6)); el.style.left=startX+'px';
-      const dx=Math.round(rand(-window.innerWidth*0.06,window.innerWidth*0.06)); const rot=Math.round(rand(90,720))+'deg';
-      el.style.setProperty('--dx', dx+'px'); el.style.setProperty('--rot', rot);
-      const duration=(rand(5.2,9.2)).toFixed(2)+'s'; el.style.animation='petalFall '+duration+' linear forwards'; el.style.animationDelay=(rand(0,1.8)).toFixed(2)+'s';
-
-      // interactions
-      el.addEventListener('click', (e)=>{ e.stopPropagation(); el.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); },300); });
-      el.addEventListener('touchstart', (e)=>{ e.stopPropagation(); el.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); },300); },{passive:true});
-
-      // when falling ends, add to stack and don't remove
-      el.addEventListener('animationend', ()=>{
-        // compute landed x position using transform (approximate by startX + dx)
-        const landedX = Math.max(6, Math.min(window.innerWidth-40, startX + dx));
-        const stackEl=document.createElement('div'); stackEl.className='stack-petal'; stackEl.style.left=(landedX + Math.round(rand(-18,18)))+'px'; stackEl.style.transform='translateY('+Math.round(rand(-8,0))+'px) rotate('+Math.round(rand(-45,45))+'deg)';
-        // interactive: click to pop stacked petal
-        stackEl.addEventListener('click', (ev)=>{ ev.stopPropagation(); stackEl.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(stackEl.parentElement) stackEl.parentElement.removeChild(stackEl); },280); });
-        stackEl.addEventListener('touchstart', (ev)=>{ ev.stopPropagation(); stackEl.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(stackEl.parentElement) stackEl.parentElement.removeChild(stackEl); },280); },{passive:true});
-        petalStack.appendChild(stackEl);
-        // limit stack size to avoid runaway DOM
-        if(petalStack.childElementCount>220){ petalStack.removeChild(petalStack.firstChild); }
-        if(el.parentElement) el.parentElement.removeChild(el);
-      });
-
-      petalContainer.appendChild(el);
-      petals.push(el);
-      // limit active falling petals
-      if(petals.length>60){ const rem=petals.shift(); if(rem && rem.parentElement) rem.parentElement.removeChild(rem); }
+    function staggerAppear(){
+      nameEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; nameEl.style.animationDelay='0.12s';
+      bioEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; bioEl.style.animationDelay='0.22s';
+      linkBtns.forEach((b,i)=>{ b.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; b.style.animationDelay=(0.32 + i*0.06)+'s'; });
     }
 
-    let spawner=null;
-    function startPetals(){ if(running) return; running=true; staggerAppear(); spawner=setInterval(()=>{ createPetal(); }, (window.innerWidth<600)?150:90); // noticeable rate but not overwhelming
-      // spawn a few for immediate visible effect
-      for(let i=0;i<8;i++) setTimeout(createPetal, i*120);
+    // Snow system (non-interactive subtle flakes)
+    let snowRunning = false;
+    const flakes = [];
+    function rand(min,max){return Math.random()*(max-min)+min}
+
+    function createFlake(){
+      const el = document.createElement('div'); el.className='flake';
+      const size = Math.round(rand(6,22)); el.style.width = size+'px'; el.style.height = size+'px';
+      const startX = Math.round(rand(6, window.innerWidth - size - 6)); el.style.left = startX+'px';
+      const dx = Math.round(rand(-window.innerWidth*0.06, window.innerWidth*0.06));
+      const rot = Math.round(rand(-540,540))+'deg'; el.style.setProperty('--dx', dx+'px'); el.style.setProperty('--rot', rot);
+      const duration = (rand(6.5,14)).toFixed(2)+'s'; el.style.animation = 'snowFall '+duration+' linear forwards';
+      el.style.animationDelay = (rand(0,2.2)).toFixed(2)+'s';
+      snowContainer.appendChild(el);
+      flakes.push(el);
+      // cleanup when animation ends
+      el.addEventListener('animationend', ()=>{ if(el.parentElement) el.parentElement.removeChild(el); const idx = flakes.indexOf(el); if(idx>=0) flakes.splice(idx,1); });
+      // limit active flakes
+      if(flakes.length>120){ const rem = flakes.shift(); if(rem && rem.parentElement) rem.parentElement.removeChild(rem); }
+    }
+
+    let snowSpawner = null;
+    function startSnow(){
+      if(snowRunning) return; snowRunning = true; staggerAppear();
+      snowSpawner = setInterval(()=>{ createFlake(); }, (window.innerWidth<600)?200:110);
+      for(let i=0;i<10;i++) setTimeout(createFlake, i*140);
     }
 
     // Splash click restores original behaviour: overlay blocks until click
-    splash.addEventListener('click', ()=>{ splash.classList.add('hidden'); try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} startPetals(); });
+    splash.addEventListener('click', ()=>{ splash.classList.add('hidden'); try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} startSnow(); });
 
     // Extra: unmute on any interaction as convenience
     document.addEventListener('click', function unmuteOnce(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', unmuteOnce); }, {passive:true});
