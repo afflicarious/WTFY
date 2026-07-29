@@ -1,197 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Link in Bio</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: #000; overflow-x: hidden; position: relative;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Link in Bio</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;width:100%;overflow:hidden}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#000;display:flex;align-items:center;justify-content:center;position:relative}
 
-        /* Background video */
-        #bgVideo {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -3;
-        }
-        body::before { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.28); z-index: -2; }
+    /* Background video */
+    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3}
+    body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.28),rgba(0,0,0,0.36));z-index:-2}
 
-        /* Splash overlay (click to unmute/enter) */
-        #splashScreen { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; z-index:1000; cursor:pointer; }
-        #splashScreen .overlay-text { font-family: 'Courier New', monospace; color:#fff; font-size:22px; letter-spacing:0.18em; text-transform:uppercase; background: rgba(0,0,0,0.45); padding: 18px 26px; border-radius: 12px; }
-        #splashScreen.hidden { display: none; }
+    /* Splash overlay - visible until user clicks */
+    #splashScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:rgba(0,0,0,0.65);cursor:pointer}
+    #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.06)}
+    #splashScreen.hidden{display:none}
 
-        /* Main glass container */
-        .glass-container {
-            background: rgba(255,255,255,0.02); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(138,43,226,0.12); border-radius: 22px; padding: 28px 20px; width: 92%; max-width: 420px;
-            box-shadow: 0 8px 40px rgba(102,126,234,0.06); text-align:center; z-index: 10;
-        }
+    /* Glass panel */
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:28px 20px;width:92%;max-width:460px;box-shadow:0 10px 50px rgba(138,43,226,0.12),0 4px 18px rgba(0,0,0,0.5);border:1px solid rgba(138,43,226,0.18)}
+    /* Glow around the panel */
+    .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
-        .profile-image { width: 100px; height:100px; border-radius:50%; object-fit:cover; margin:0 auto 14px; border:1px solid rgba(255,255,255,0.12); }
-        .name { font-size:26px; color:#fff; letter-spacing:6px; text-transform:uppercase; margin-bottom:8px; }
-        .bio { color: rgba(255,255,255,0.9); margin-bottom: 18px; }
+    .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08)}
+    .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;transform:translateY(12px)}
+    .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;transform:translateY(12px)}
 
-        /* Links grid - two rows layout that doesn't feel suffocating */
-        .links-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: center; justify-items: center;
-        }
-        /* On small screens use 3 columns then 2 */
-        @media (max-width: 420px) { .links-grid { grid-template-columns: repeat(3,1fr); } }
-        @media (max-width: 320px) { .links-grid { grid-template-columns: repeat(2,1fr); gap:8px; } }
+    /* animated entrance - will stagger via inline style delays */
+    @keyframes appearUp {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-        .link-btn {
-            display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px 12px; background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06); color:#fff; text-decoration:none; font-weight:600; border-radius: 12px;
-            transition: transform 140ms cubic-bezier(.2,.9,.3,1), box-shadow 140ms ease, background 140ms ease;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .link-btn:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(102,126,234,0.08); }
-        .link-btn:active, .link-btn.touch-press { transform: translateY(-1px) scale(0.995); box-shadow: 0 4px 12px rgba(102,126,234,0.06); }
+    /* Links grid: 4 columns (2 rows on desktop) */
+    .links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:420px){.links-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
 
-        /* Snowfall visuals */
-        #snowContainer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: -1; }
-        .snowflake {
-            position: absolute; top: -40px; width: 10px; height: 10px; pointer-events: auto;
-            border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0.65) 40%, rgba(255,255,255,0.18) 70%);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.22), inset 0 2px 6px rgba(255,255,255,0.35);
-            opacity: 0.9; transform-origin: center; will-change: transform, opacity;
-            transition: transform 120ms ease-out;
-        }
-        .snow-melt { animation: melt 300ms forwards ease; }
-        @keyframes melt { to { transform: scale(0.2) translateY(12px); opacity: 0; } }
+    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:#fff;border:1px solid rgba(255,255,255,0.06);font-weight:700;text-decoration:none;transition:transform .14s cubic-bezier(.2,.9,.3,1),box-shadow .14s,background .14s;opacity:0;transform:translateY(10px);}
+    .link-btn:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(138,43,226,0.12)}
+    .link-btn.touch-press{transform:translateY(-1px) scale(.995);box-shadow:0 6px 18px rgba(138,43,226,0.08)}
 
-        /* small accessibility tweaks */
-        .links-grid .link-btn span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* Cherry blossom petals area */
+    #petalContainer{position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:-1}
+    .petal{position:absolute;top:-160px;width:36px;height:34px;border-radius:46% 54% 50% 50%/48% 48% 52% 52%;background:linear-gradient(180deg,#fff0f6,#ffd1e8);border:1px solid rgba(255,255,255,0.6);box-shadow:0 8px 18px rgba(0,0,0,0.18),inset 0 4px 8px rgba(255,255,255,0.35);filter:drop-shadow(0 8px 12px rgba(255,160,190,0.06));pointer-events:auto;cursor:pointer;will-change:transform,opacity}
 
-        /* Responsive glass padding */
-        @media (max-width: 480px) { .glass-container { padding: 20px 14px; } }
-    </style>
+    /* falling animation - translate Y to bottom and rotate */
+    @keyframes petalFall {to{transform:translate3d(var(--dx,0px),120vh,0) rotate(var(--rot,360deg));opacity:0.95}}
+
+    /* stacked petals at bottom */
+    .petal-stack{position:fixed;left:0;right:0;bottom:0;height:140px;pointer-events:auto;z-index:5;overflow:visible}
+    .stack-petal{position:absolute;bottom:0;width:34px;height:30px;border-radius:46% 54% 50% 50%;background:linear-gradient(180deg,#fff3f8,#ffcce2);border:1px solid rgba(255,255,255,0.5);box-shadow:0 6px 10px rgba(0,0,0,0.16);pointer-events:auto}
+
+    /* petal pop animation */
+    @keyframes petalPop{0%{transform:scale(1);opacity:1}50%{transform:scale(1.12)}100%{transform:scale(0);opacity:0}}
+    .petal-pop{animation:petalPop .28s cubic-bezier(.2,.8,.2,1) forwards}
+
+    /* subtle shimmer on buttons/text when appear */
+    @keyframes shimmer{0%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}50%{filter:drop-shadow(0 0 14px rgba(138,43,226,0.12))}100%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}}
+
+  </style>
 </head>
 <body>
-    <audio id="popSound" preload="auto"><source src="pop.mp4" type="audio/mp4"></audio>
+  <audio id="popSound" preload="auto"><source src="pop.mp4" type="audio/mp4"></audio>
 
-    <!-- Background video: autoplay muted so it shows immediately; unmute on user gesture via overlay -->
-    <video id="bgVideo" autoplay muted playsinline loop>
-        <source src="Cowboy.mp4" type="video/mp4">
-    </video>
+  <video id="bgVideo" muted playsinline loop>
+    <source src="Cowboy.mp4" type="video/mp4">
+  </video>
 
-    <div id="snowContainer" aria-hidden="true"></div>
+  <div id="petalContainer" aria-hidden="true"></div>
+  <div class="petal-stack" id="petalStack" aria-hidden="false"></div>
 
-    <!-- Full-screen landing overlay -->
-    <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
+  <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
-    <!-- Glass container with content and two-row buttons -->
-    <div class="glass-container" id="glassContainer">
-        <img src="pfp.jpg" alt="Profile" class="profile-image">
-        <h1 class="name">AFFLY</h1>
-        <p class="bio">Trying to survive another boring day...</p>
+  <div class="glass-container" id="glassContainer">
+    <img src="pfp.jpg" alt="Profile" class="profile-image">
+    <h1 class="name" id="nameEl">AFFLY</h1>
+    <p class="bio" id="bioEl">Trying to survive another boring day...</p>
 
-        <div class="links-grid" id="linksGrid">
-            <a class="link-btn" href="#">Affly Intel</a>
-            <a class="link-btn" href="#">$AFFLY</a>
-            <a class="link-btn" href="#">Affly Forge</a>
-            <a class="link-btn" href="#">Affly Systems</a>
-            <a class="link-btn" href="#">Affly Games</a>
-            <a class="link-btn" href="#">Affly Media</a>
-            <a class="link-btn" href="#">Affly Network</a>
-        </div>
+    <div class="links-grid" id="linksGrid">
+      <a class="link-btn" href="#">Affly Intel</a>
+      <a class="link-btn" href="#">$AFFLY</a>
+      <a class="link-btn" href="#">Affly Forge</a>
+      <a class="link-btn" href="#">Affly Systems</a>
+      <a class="link-btn" href="#">Affly Games</a>
+      <a class="link-btn" href="#">Affly Media</a>
+      <a class="link-btn" href="#">Affly Network</a>
+      <a class="link-btn" href="#">Affly Socials</a>
     </div>
+  </div>
 
-    <script>
-        // --- Video / splash behaviour ---
-        const splashScreen = document.getElementById('splashScreen');
-        const video = document.getElementById('bgVideo');
-        let entered = false;
-        function enterApp() {
-            if (entered) return; entered = true;
-            splashScreen.classList.add('hidden');
-            // try to unmute (user gesture)
-            try { video.muted = false; video.play().catch(()=>{}); }
-            catch(e){}
-        }
-        splashScreen.addEventListener('click', enterApp, {passive:true});
+  <script>
+    // --- Audio helpers ---
+    const popAudio = document.getElementById('popSound');
+    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    function synthPop(){ if(audioCtx.state==='suspended') audioCtx.resume(); const len=audioCtx.sampleRate*0.06; const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<len;i++){const p=i/len; d[i]=(Math.random()*2-1)*(1-p)*0.18} const s=audioCtx.createBufferSource(); s.buffer=buf; const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=900; s.connect(f).connect(audioCtx.destination); s.start(); }
+    function playPop(){ try{ popAudio.currentTime=0; const p=popAudio.play(); if(p&&p.catch) p.catch(()=>synthPop()); }catch(e){ synthPop(); } }
 
-        // --- Snowfall system ---
-        const snowContainer = document.getElementById('snowContainer');
-        const popAudio = document.getElementById('popSound');
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function synthPop() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const len = audioCtx.sampleRate * 0.05; const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-            const d = buf.getChannelData(0); for (let i=0;i<len;i++){ const p=i/len; d[i]=(Math.random()*2-1)*(1-p)*0.18; }
-            const s = audioCtx.createBufferSource(); s.buffer=buf; const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=1200; s.connect(f).connect(audioCtx.destination); s.start();
-        }
-        function playPop(){ try{ popAudio.currentTime=0; const p=popAudio.play(); if(p&&p.catch) p.catch(()=>synthPop()); }catch(e){ synthPop(); } }
+    // --- Elements ---
+    const splash = document.getElementById('splashScreen');
+    const video = document.getElementById('bgVideo');
+    const petalContainer = document.getElementById('petalContainer');
+    const petalStack = document.getElementById('petalStack');
+    const nameEl = document.getElementById('nameEl');
+    const bioEl = document.getElementById('bioEl');
+    const linkBtns = Array.from(document.querySelectorAll('.link-btn'));
 
-        let flakes = [];
-        function rand(min,max){ return Math.random()*(max-min)+min; }
-        function createFlake() {
-            // limit flakes
-            if (flakes.length > 140) return;
-            const el = document.createElement('div'); el.className='snowflake';
-            const size = Math.round(rand(8, 20)); el.style.width=`${size}px`; el.style.height=`${size}px`;
-            const left = Math.round(rand(6, window.innerWidth - size - 6)); el.style.left = left + 'px';
-            const speed = rand(1.2, 3.6); // px per frame multiplier (higher = faster)
-            const drift = rand(-0.6, 0.6);
-            el.dataset.vx = drift; el.dataset.vy = speed; el.dataset.size = size;
+    // entrance animations for text & buttons (staggered)
+    function staggerAppear(){ nameEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; nameEl.style.animationDelay='0.12s'; bioEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; bioEl.style.animationDelay='0.22s'; linkBtns.forEach((b,i)=>{ b.style.animation='appearUp .42s cubic-bezier(.2,.9,.2,1) forwards'; b.style.animationDelay=(0.32 + i*0.06)+'s'; }); }
 
-            // clicking or tapping flake triggers pop + small melt animation
-            el.addEventListener('click', (e)=>{ e.stopPropagation(); el.classList.add('snow-melt'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); flakes = flakes.filter(f=>f.el!==el); }, 320); }, {passive:true});
-            el.addEventListener('touchstart', (e)=>{ e.stopPropagation(); el.classList.add('snow-melt'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); flakes = flakes.filter(f=>f.el!==el); }, 320); }, {passive:true});
+    // petal system
+    let running=false;
+    const petals=[];
+    function rand(min,max){return Math.random()*(max-min)+min}
+    function createPetal(){
+      const el=document.createElement('div'); el.className='petal';
+      const size=Math.round(rand(18,48)); el.style.width=size+'px'; el.style.height=Math.round(size*0.86)+'px';
+      const startX=Math.round(rand(6,window.innerWidth-size-6)); el.style.left=startX+'px';
+      const dx=Math.round(rand(-window.innerWidth*0.06,window.innerWidth*0.06)); const rot=Math.round(rand(90,720))+'deg';
+      el.style.setProperty('--dx', dx+'px'); el.style.setProperty('--rot', rot);
+      const duration=(rand(5.2,9.2)).toFixed(2)+'s'; el.style.animation='petalFall '+duration+' linear forwards'; el.style.animationDelay=(rand(0,1.8)).toFixed(2)+'s';
 
-            snowContainer.appendChild(el);
-            flakes.push({el, x: left, y: -40, vx: drift, vy: speed, size});
-        }
+      // interactions
+      el.addEventListener('click', (e)=>{ e.stopPropagation(); el.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); },300); });
+      el.addEventListener('touchstart', (e)=>{ e.stopPropagation(); el.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); },300); },{passive:true});
 
-        let last = performance.now();
-        function tick(now){ const dt = Math.min(now - last, 40); last = now; const friction = 0.98;
-            for (let i=flakes.length-1;i>=0;i--){ const f=flakes[i]; f.vx *= friction; f.vy = f.vy; f.x += f.vx * (dt/16.67) * 1.6; f.y += f.vy * (dt/16.67);
-                const sway = Math.sin((now/600) + i) * (f.size*0.04);
-                f.el.style.transform = `translate(${f.x + sway}px, ${f.y}px) rotate(${(f.x+f.y)%360}deg)`;
-                if (f.y > window.innerHeight - 18) {
-                    // melt on ground
-                    f.el.classList.add('snow-melt'); playPop();
-                    setTimeout(()=>{ if(f.el.parentElement) f.el.parentElement.removeChild(f.el); }, 300);
-                    flakes.splice(i,1);
-                }
-            }
-            requestAnimationFrame(tick);
-        }
+      // when falling ends, add to stack and don't remove
+      el.addEventListener('animationend', ()=>{
+        // compute landed x position using transform (approximate by startX + dx)
+        const landedX = Math.max(6, Math.min(window.innerWidth-40, startX + dx));
+        const stackEl=document.createElement('div'); stackEl.className='stack-petal'; stackEl.style.left=(landedX + Math.round(rand(-18,18)))+'px'; stackEl.style.transform='translateY('+Math.round(rand(-8,0))+'px) rotate('+Math.round(rand(-45,45))+'deg)';
+        // interactive: click to pop stacked petal
+        stackEl.addEventListener('click', (ev)=>{ ev.stopPropagation(); stackEl.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(stackEl.parentElement) stackEl.parentElement.removeChild(stackEl); },280); });
+        stackEl.addEventListener('touchstart', (ev)=>{ ev.stopPropagation(); stackEl.classList.add('petal-pop'); playPop(); setTimeout(()=>{ if(stackEl.parentElement) stackEl.parentElement.removeChild(stackEl); },280); },{passive:true});
+        petalStack.appendChild(stackEl);
+        // limit stack size to avoid runaway DOM
+        if(petalStack.childElementCount>220){ petalStack.removeChild(petalStack.firstChild); }
+        if(el.parentElement) el.parentElement.removeChild(el);
+      });
 
-        // Start snowfall automatically so user sees effect immediately
-        function startSnow() {
-            // spawn rate tuned: noticeable but not overwhelming
-            const rate = (window.innerWidth < 600) ? 160 : 90; // ms
-            // create a few immediately
-            for (let i=0;i<12;i++) setTimeout(createFlake, i*80);
-            setInterval(()=>{ createFlake(); }, rate);
-            requestAnimationFrame(tick);
-        }
+      petalContainer.appendChild(el);
+      petals.push(el);
+      // limit active falling petals
+      if(petals.length>60){ const rem=petals.shift(); if(rem && rem.parentElement) rem.parentElement.removeChild(rem); }
+    }
 
-        // Start snow immediately so changes are visible without extra gestures
-        startSnow();
+    let spawner=null;
+    function startPetals(){ if(running) return; running=true; staggerAppear(); spawner=setInterval(()=>{ createPetal(); }, (window.innerWidth<600)?150:90); // noticeable rate but not overwhelming
+      // spawn a few for immediate visible effect
+      for(let i=0;i<8;i++) setTimeout(createPetal, i*120);
+    }
 
-        // --- Buttons: touch feedback (add and remove class) ---
-        const buttons = document.querySelectorAll('.link-btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('touchstart', ()=> btn.classList.add('touch-press'), {passive:true});
-            btn.addEventListener('touchend', ()=> btn.classList.remove('touch-press'), {passive:true});
-            btn.addEventListener('mousedown', ()=> btn.classList.add('touch-press'));
-            btn.addEventListener('mouseup', ()=> btn.classList.remove('touch-press'));
-            btn.addEventListener('mouseleave', ()=> btn.classList.remove('touch-press'));
-        });
+    // Splash click restores original behaviour: overlay blocks until click
+    splash.addEventListener('click', ()=>{ splash.classList.add('hidden'); try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} startPetals(); });
 
-        // Keep video unmute attempt on first interaction anywhere (extra convenience)
-        document.addEventListener('click', function onceUnmute(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', onceUnmute); }, {passive:true});
+    // Extra: unmute on any interaction as convenience
+    document.addEventListener('click', function unmuteOnce(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', unmuteOnce); }, {passive:true});
 
-        // Make layout visually balanced: if 7 buttons, grid auto-wrap ensures two rows. No extra JS needed.
+    // Button touch feedback
+    linkBtns.forEach(btn=>{
+      btn.addEventListener('touchstart', ()=>btn.classList.add('touch-press'), {passive:true});
+      btn.addEventListener('touchend', ()=>btn.classList.remove('touch-press'), {passive:true});
+      btn.addEventListener('mousedown', ()=>btn.classList.add('touch-press'));
+      btn.addEventListener('mouseup', ()=>btn.classList.remove('touch-press'));
+      btn.addEventListener('mouseleave', ()=>btn.classList.remove('touch-press'));
+    });
 
-        // Handle resize: ensure flakes remain within bounds
-        window.addEventListener('resize', ()=>{ flakes.forEach(f=>{ f.x = Math.min(Math.max(6, f.x), window.innerWidth - (f.size+6)); }); });
-    </script>
+    // Resize safety
+    window.addEventListener('resize', ()=>{});
+
+    // Accessibility: allow Enter key to enter
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !splash.classList.contains('hidden')){ splash.click(); } });
+
+  </script>
 </body>
 </html>
