@@ -5,805 +5,193 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link in Bio</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-            overflow-x: hidden;
-            position: relative;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: #000; overflow-x: hidden; position: relative;
         }
 
-        /* Background video styling */
+        /* Background video */
         #bgVideo {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: -2;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -3;
         }
+        body::before { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.28); z-index: -2; }
 
-        /* Dark overlay for better readability */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: -1;
-        }
+        /* Splash overlay (click to unmute/enter) */
+        #splashScreen { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; z-index:1000; cursor:pointer; }
+        #splashScreen .overlay-text { font-family: 'Courier New', monospace; color:#fff; font-size:22px; letter-spacing:0.18em; text-transform:uppercase; background: rgba(0,0,0,0.45); padding: 18px 26px; border-radius: 12px; }
+        #splashScreen.hidden { display: none; }
 
-        /* Full-screen typewriter overlay */
-        #splashScreen {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            text-align: center;
-            cursor: pointer;
-            opacity: 1;
-            transition: opacity 0.5s ease;
-        }
-
-        #splashScreen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        #splashScreen .overlay-text {
-            font-family: 'Courier New', Courier, monospace;
-            color: #fff;
-            font-size: 24px;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-        }
-
-
-        /* Glass container */
+        /* Main glass container */
         .glass-container {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(138, 43, 226, 0.18);
-            border-radius: 30px;
-            padding: 40px 30px;
-            width: 90%;
-            max-width: 380px;
-            box-shadow: 0 0 50px rgba(138, 43, 226, 0.2);
-            text-align: center;
-            animation: slideUp 0.6s ease-out;
-            transform-style: preserve-3d;
-            transition: transform 0.05s ease-out;
-            will-change: transform;
+            background: rgba(255,255,255,0.02); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(138,43,226,0.12); border-radius: 22px; padding: 28px 20px; width: 92%; max-width: 420px;
+            box-shadow: 0 8px 40px rgba(102,126,234,0.06); text-align:center; z-index: 10;
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        .profile-image { width: 100px; height:100px; border-radius:50%; object-fit:cover; margin:0 auto 14px; border:1px solid rgba(255,255,255,0.12); }
+        .name { font-size:26px; color:#fff; letter-spacing:6px; text-transform:uppercase; margin-bottom:8px; }
+        .bio { color: rgba(255,255,255,0.9); margin-bottom: 18px; }
 
-        /* Profile picture */
-        .profile-image {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: block;
-            margin: 0 auto 25px;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.35);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            animation: fadeIn 0.8s ease-out 0.2s both;
+        /* Links grid - two rows layout that doesn't feel suffocating */
+        .links-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: center; justify-items: center;
         }
+        /* On small screens use 3 columns then 2 */
+        @media (max-width: 420px) { .links-grid { grid-template-columns: repeat(3,1fr); } }
+        @media (max-width: 320px) { .links-grid { grid-template-columns: repeat(2,1fr); gap:8px; } }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        /* Name heading */
-        .name {
-            font-size: 32px;
-            font-weight: 300;
-            color: #fff;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            overflow: hidden;
-            white-space: nowrap;
-            border-right: 2px solid rgba(255, 255, 255, 0.8);
-            width: 6ch;
-            margin: 0 auto 20px;
-            animation: typewriterName 2s steps(5) 0.5s forwards, blink 0.75s step-end infinite;
-        }
-
-        @keyframes typewriterName {
-            from { width: 0; }
-            to { width: 6ch; }
-        }
-
-        @keyframes blink {
-            50% { border-color: transparent; }
-        }
-
-        /* Bio text */
-        .bio {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.85);
-            text-align: center;
-            margin-bottom: 30px;
-            line-height: 1.6;
-            animation: fadeIn 0.8s ease-out 0.4s both;
-        }
-
-        /* Links container */
-        .links-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* Link button styling */
         .link-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 14px 20px;
-                background: transparent;
-                border: 1px solid rgba(138, 43, 226, 0.15);
-                border-radius: 50px;
-                color: #fff;
-                font-size: 15px;
-                font-weight: 600;
-                text-decoration: none;
-                cursor: pointer;
-                transition: transform 0.2s ease, text-shadow 0.2s ease;
+            display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px 12px; background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06); color:#fff; text-decoration:none; font-weight:600; border-radius: 12px;
+            transition: transform 140ms cubic-bezier(.2,.9,.3,1), box-shadow 140ms ease, background 140ms ease;
+            -webkit-tap-highlight-color: transparent;
         }
+        .link-btn:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(102,126,234,0.08); }
+        .link-btn:active, .link-btn.touch-press { transform: translateY(-1px) scale(0.995); box-shadow: 0 4px 12px rgba(102,126,234,0.06); }
 
-        .link-btn:hover {
-            background: transparent;
-            color: #fff;
-            transform: scale(1.02);
-            text-shadow: 0 0 8px rgba(138, 43, 226, 0.8);
-            border-color: rgba(138, 43, 226, 0.3);
-            box-shadow: 0 0 35px rgba(138, 43, 226, 0.3), 0 12px 28px rgba(0, 0, 0, 0.18);
+        /* Snowfall visuals */
+        #snowContainer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: -1; }
+        .snowflake {
+            position: absolute; top: -40px; width: 10px; height: 10px; pointer-events: auto;
+            border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0.65) 40%, rgba(255,255,255,0.18) 70%);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.22), inset 0 2px 6px rgba(255,255,255,0.35);
+            opacity: 0.9; transform-origin: center; will-change: transform, opacity;
+            transition: transform 120ms ease-out;
         }
+        .snow-melt { animation: melt 300ms forwards ease; }
+        @keyframes melt { to { transform: scale(0.2) translateY(12px); opacity: 0; } }
 
-        .link-btn:active {
-            transform: translateY(0);
-        }
+        /* small accessibility tweaks */
+        .links-grid .link-btn span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        .petal-container {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: -1;
-        }
-
-        .petal-stack {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: 120px;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: -1;
-        }
-
-        .cherry-blossom {
-            position: absolute;
-            top: -60px;
-            width: 50px;
-            height: 50px;
-            opacity: 0.95;
-            animation: bubbleFall linear forwards;
-            pointer-events: auto;
-            cursor: pointer;
-            filter: drop-shadow(0 0 8px rgba(138, 43, 226, 0.4));
-        }
-
-        .stack-blossom {
-            position: absolute;
-            width: 48px;
-            height: 48px;
-            opacity: 0.85;
-            pointer-events: auto;
-            cursor: pointer;
-            filter: drop-shadow(0 0 6px rgba(138, 43, 226, 0.3));
-        }
-
-        @keyframes bubbleFall {
-            to {
-                transform: translate3d(0, 120vh, 0) scale(1.1);
-                opacity: 0.3;
-            }
-        }
-
-        @keyframes popBubble {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.15);
-            }
-            100% {
-                transform: scale(0);
-                opacity: 0;
-            }
-        }
-
-        /* BUBBLES */
-        #bubbleContainer {
-            position: fixed;
-            inset: 0;
-            pointer-events: none; /* bubbles won't block interactions */
-            overflow: visible;
-            z-index: -1;
-        }
-
-        .bubble {
-            position: absolute;
-            bottom: -120px; /* start off-screen */
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.06) 60%);
-            border: 1px solid rgba(255,255,255,0.25);
-            box-shadow: inset 0 -6px 12px rgba(0,0,0,0.18), 0 8px 24px rgba(102,126,234,0.06);
-            will-change: transform, opacity;
-            opacity: 0.95;
-            transform-origin: center;
-        }
-
-        .bubble-popping {
-            animation: popBubble 260ms cubic-bezier(.2,.8,.2,1) forwards;
-        }
-
-        /* Glow styling */
-        .name,
-        .bio,
-        .overlay-text,
-        .link-btn {
-            text-shadow: 0 0 20px rgba(102, 126, 234, 0.25);
-        }
-
-        /* Animation for buttons */
-        .link-btn {
-            animation: slideInButton 0.6s ease-out backwards;
-        }
-
-        .link-btn:nth-child(1) { animation-delay: 0.5s; }
-        .link-btn:nth-child(2) { animation-delay: 0.55s; }
-        .link-btn:nth-child(3) { animation-delay: 0.6s; }
-        .link-btn:nth-child(4) { animation-delay: 0.65s; }
-        .link-btn:nth-child(5) { animation-delay: 0.7s; }
-        .link-btn:nth-child(6) { animation-delay: 0.75s; }
-
-        @keyframes slideInButton {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .glass-container {
-                padding: 25px 18px;
-                max-width: 320px;
-            }
-
-            .profile-image {
-                width: 90px;
-                height: 90px;
-                margin-bottom: 15px;
-            }
-
-            .name {
-                font-size: 22px;
-                letter-spacing: 3px;
-                width: 5ch;
-                margin-bottom: 12px;
-            }
-
-            .bio {
-                font-size: 12px;
-                margin-bottom: 18px;
-            }
-
-            .link-btn {
-                padding: 10px 16px;
-                font-size: 13px;
-                gap: 6px;
-            }
-
-            .links-container {
-                gap: 8px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .glass-container {
-                padding: 20px 15px;
-                max-width: 85vw;
-            }
-
-            .profile-image {
-                width: 80px;
-                height: 80px;
-                margin-bottom: 12px;
-            }
-
-            .name {
-                font-size: 20px;
-                letter-spacing: 2px;
-                width: 5ch;
-                margin-bottom: 10px;
-            }
-
-            .bio {
-                font-size: 11px;
-                margin-bottom: 15px;
-                line-height: 1.4;
-            }
-
-            .link-btn {
-                padding: 9px 14px;
-                font-size: 12px;
-                gap: 5px;
-            }
-
-            .links-container {
-                gap: 7px;
-            }
-        }
-
-        @media (max-width: 360px) {
-            .glass-container {
-                padding: 18px 12px;
-                max-width: 90vw;
-            }
-
-            .profile-image {
-                width: 70px;
-                height: 70px;
-                margin-bottom: 10px;
-            }
-
-            .name {
-                font-size: 18px;
-                letter-spacing: 1px;
-                width: 5ch;
-                margin-bottom: 8px;
-            }
-
-            .bio {
-                font-size: 10px;
-                margin-bottom: 12px;
-            }
-
-            .link-btn {
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-
-            .links-container {
-                gap: 6px;
-            }
-        }
-
+        /* Responsive glass padding */
+        @media (max-width: 480px) { .glass-container { padding: 20px 14px; } }
     </style>
 </head>
 <body>
-    <audio id="popSound" preload="auto">
-        <source src="pop.mp4" type="audio/mp4">
-    </audio>
+    <audio id="popSound" preload="auto"><source src="pop.mp4" type="audio/mp4"></audio>
 
-    <!-- Background video -->
-    <!-- Removed autoplay so playback and unmute happen only after user interaction -->
-    <video id="bgVideo" muted playsinline loop>
+    <!-- Background video: autoplay muted so it shows immediately; unmute on user gesture via overlay -->
+    <video id="bgVideo" autoplay muted playsinline loop>
         <source src="Cowboy.mp4" type="video/mp4">
-        Your browser does not support the video element.
     </video>
 
-    <div class="petal-container" id="petalContainer"></div>
-    <div class="petal-stack" id="petalStack"></div>
-
-    <!-- Bubble container -->
-    <div id="bubbleContainer"></div>
+    <div id="snowContainer" aria-hidden="true"></div>
 
     <!-- Full-screen landing overlay -->
-    <div id="splashScreen">
-        <div class="overlay-text">Click to enter...</div>
-    </div>
+    <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
-    <!-- Glass container with content -->
+    <!-- Glass container with content and two-row buttons -->
     <div class="glass-container" id="glassContainer">
-        <!-- Profile picture -->
-        <img src="pfp.jpg" alt="Profile Picture" class="profile-image">
-
-        <!-- Name -->
+        <img src="pfp.jpg" alt="Profile" class="profile-image">
         <h1 class="name">AFFLY</h1>
-
-        <!-- Bio -->
         <p class="bio">Trying to survive another boring day...</p>
 
-        <!-- Links container -->
-        <div class="links-container">
-            <a href="https://instagram.com" target="_blank" class="link-btn">
-                Instagram
-            </a>
-            <a href="https://linkedin.com" target="_blank" class="link-btn">
-                LinkedIn
-            </a>
-            <a href="https://discord.com" target="_blank" class="link-btn">
-                Discord
-            </a>
-            <a href="https://twitter.com" target="_blank" class="link-btn">
-                Twitter
-            </a>
-            <a href="mailto:your.email@example.com" class="link-btn">
-                Email
-            </a>
-            <a href="https://your-portfolio.com" target="_blank" class="link-btn">
-                Portfolio
-            </a>
+        <div class="links-grid" id="linksGrid">
+            <a class="link-btn" href="#">Affly Intel</a>
+            <a class="link-btn" href="#">$AFFLY</a>
+            <a class="link-btn" href="#">Affly Forge</a>
+            <a class="link-btn" href="#">Affly Systems</a>
+            <a class="link-btn" href="#">Affly Games</a>
+            <a class="link-btn" href="#">Affly Media</a>
+            <a class="link-btn" href="#">Affly Network</a>
         </div>
     </div>
 
     <script>
+        // --- Video / splash behaviour ---
         const splashScreen = document.getElementById('splashScreen');
         const video = document.getElementById('bgVideo');
-        const glassContainer = document.getElementById('glassContainer');
-        let started = false;
-
+        let entered = false;
         function enterApp() {
+            if (entered) return; entered = true;
             splashScreen.classList.add('hidden');
-            if (!started) {
-                // Unmute and play the video after a user gesture
-                video.muted = false;
-                video.play().catch(err => console.log('Play error:', err));
-                started = true;
-                startBubbles(); // start bubble animation system on enter
-            }
+            // try to unmute (user gesture)
+            try { video.muted = false; video.play().catch(()=>{}); }
+            catch(e){}
         }
+        splashScreen.addEventListener('click', enterApp, {passive:true});
 
-        splashScreen.addEventListener('click', () => {
-            if (!splashScreen.classList.contains('hidden')) {
-                enterApp();
-            }
-        });
-
-        const petalContainer = document.getElementById('petalContainer');
-        const petalStack = document.getElementById('petalStack');
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function playPopSound() {
-            // keep the existing synthesized pop for petals
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            const bufferSize = audioCtx.sampleRate * 0.08;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                const progress = i / bufferSize;
-                data[i] = (Math.random() * 2 - 1) * (1 - progress) * 0.2;
-            }
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = 1200;
-            source.connect(filter).connect(audioCtx.destination);
-            source.start();
-        }
-
-        function createPetal() {
-            const petal = document.createElement('div');
-            petal.className = 'petal';
-            const size = Math.random() * 20 + 5;
-            const left = Math.random() * 90 + 5;
-            const duration = Math.random() * 4 + 4;
-            const delay = Math.random() * 3;
-            petal.style.width = `${size}px`;
-            petal.style.height = `${size}px`;
-            petal.style.left = `${left}vw`;
-            petal.style.animationDuration = `${duration}s`;
-            petal.style.animationDelay = `${delay}s`;
-            petal.style.opacity = 0;
-            petal.style.transition = 'opacity 0.2s ease';
-            petal.addEventListener('animationstart', () => petal.style.opacity = 0.75);
-            petal.addEventListener('click', () => {
-                petal.remove();
-                playPopSound();
-            });
-            petal.addEventListener('touchstart', () => {
-                petal.remove();
-                playPopSound();
-            });
-            petal.addEventListener('animationend', () => {
-                const stackPetal = document.createElement('div');
-                stackPetal.className = 'stack-petal';
-                stackPetal.style.width = `${size}px`;
-                stackPetal.style.height = `${size}px`;
-                stackPetal.style.left = `${left}vw`;
-                stackPetal.style.bottom = '0';
-                stackPetal.style.transform = `translateY(-${Math.random() * 20}px) rotate(${Math.random() * 360}deg)`;
-                petalStack.appendChild(stackPetal);
-                if (petalStack.childElementCount > 80) {
-                    petalStack.removeChild(petalStack.firstChild);
-                }
-                petal.remove();
-            });
-            petalContainer.appendChild(petal);
-        }
-
-        setInterval(() => {
-            if (petalContainer.childElementCount < 24) {
-                createPetal();
-            }
-        }, 250);
-
-        document.addEventListener('touchstart', (event) => {
-            const { clientX, clientY } = event.touches[0];
-            const edgeSize = 80;
-            const isCorner = (
-                (clientX < edgeSize && clientY < edgeSize) ||
-                (clientX > window.innerWidth - edgeSize && clientY < edgeSize) ||
-                (clientX < edgeSize && clientY > window.innerHeight - edgeSize) ||
-                (clientX > window.innerWidth - edgeSize && clientY > window.innerHeight - edgeSize)
-            );
-            if (isCorner) {
-                playPopSound();
-            }
-        });
-
-        document.addEventListener('click', (event) => {
-            const { clientX, clientY } = event;
-            const edgeSize = 80;
-            const isCorner = (
-                (clientX < edgeSize && clientY < edgeSize) ||
-                (clientX > window.innerWidth - edgeSize && clientY < edgeSize) ||
-                (clientX < edgeSize && clientY > window.innerHeight - edgeSize) ||
-                (clientX > window.innerWidth - edgeSize && clientY > window.innerHeight - edgeSize)
-            );
-            if (isCorner) {
-                playPopSound();
-            }
-        });
-
-        // ===== MAGNETIC BUTTON EFFECT =====
-        const buttons = document.querySelectorAll('.link-btn');
-        const magneticStrength = 30; // Pixels to move towards cursor
-
-        document.addEventListener('mousemove', (e) => {
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
-
-            buttons.forEach(button => {
-                const rect = button.getBoundingClientRect();
-                const buttonX = rect.left + rect.width / 2;
-                const buttonY = rect.top + rect.height / 2;
-
-                const distance = Math.sqrt(
-                    Math.pow(mouseX - buttonX, 2) + Math.pow(mouseY - buttonY, 2)
-                );
-
-                if (distance < 100) {
-                    const angle = Math.atan2(mouseY - buttonY, mouseX - buttonX);
-                    const moveX = Math.cos(angle) * magneticStrength * (1 - distance / 100);
-                    const moveY = Math.sin(angle) * magneticStrength * (1 - distance / 100);
-
-                    button.style.transform = `translate(${moveX}px, ${moveY}px)`;
-                } else {
-                    button.style.transform = 'translate(0, 0)';
-                }
-            });
-        });
-
-        // ===== TILT EFFECT FOR GLASS CONTAINER =====
-        let mouseX = 0;
-        let mouseY = 0;
-        const tiltStrength = 25; // Max rotation degrees
-
-        document.addEventListener('mousemove', (e) => {
-            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
-            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-
-            const rotateX = -mouseY * tiltStrength;
-            const rotateY = mouseX * tiltStrength;
-
-            glassContainer.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
-
-        // Reset tilt when mouse leaves window
-        document.addEventListener('mouseleave', () => {
-            glassContainer.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-        });
-
-        // Touch support for mobile devices
-        document.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            mouseX = (touch.clientX / window.innerWidth - 0.5) * 2;
-            mouseY = (touch.clientY / window.innerHeight - 0.5) * 2;
-
-            const rotateX = -mouseY * tiltStrength;
-            const rotateY = mouseX * tiltStrength;
-
-            glassContainer.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
-
-        document.addEventListener('touchend', () => {
-            glassContainer.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-        });
-
-        // ===== BUBBLES SYSTEM =====
-        const bubbleContainer = document.getElementById('bubbleContainer');
+        // --- Snowfall system ---
+        const snowContainer = document.getElementById('snowContainer');
         const popAudio = document.getElementById('popSound');
-        let bubbleInterval = null;
-        const bubbles = [];
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function synthPop() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const len = audioCtx.sampleRate * 0.05; const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+            const d = buf.getChannelData(0); for (let i=0;i<len;i++){ const p=i/len; d[i]=(Math.random()*2-1)*(1-p)*0.18; }
+            const s = audioCtx.createBufferSource(); s.buffer=buf; const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=1200; s.connect(f).connect(audioCtx.destination); s.start();
+        }
+        function playPop(){ try{ popAudio.currentTime=0; const p=popAudio.play(); if(p&&p.catch) p.catch(()=>synthPop()); }catch(e){ synthPop(); } }
 
-        function rand(min, max) { return Math.random() * (max - min) + min; }
+        let flakes = [];
+        function rand(min,max){ return Math.random()*(max-min)+min; }
+        function createFlake() {
+            // limit flakes
+            if (flakes.length > 140) return;
+            const el = document.createElement('div'); el.className='snowflake';
+            const size = Math.round(rand(8, 20)); el.style.width=`${size}px`; el.style.height=`${size}px`;
+            const left = Math.round(rand(6, window.innerWidth - size - 6)); el.style.left = left + 'px';
+            const speed = rand(1.2, 3.6); // px per frame multiplier (higher = faster)
+            const drift = rand(-0.6, 0.6);
+            el.dataset.vx = drift; el.dataset.vy = speed; el.dataset.size = size;
 
-        function createBubble() {
-            const el = document.createElement('div');
-            el.className = 'bubble';
-            const size = Math.round(rand(14, 60));
-            el.style.width = `${size}px`;
-            el.style.height = `${size}px`;
-            // Start position somewhere along the bottom width
-            const startX = rand(6, window.innerWidth - 6 - size);
-            const startY = window.innerHeight + size + rand(0, 60);
-            const vx = rand(-0.03, 0.03) * window.innerWidth; // small horizontal drift
-            const vy = -rand(0.02, 0.09) * window.innerHeight; // upwards speed in px per ms
-            const wobble = rand(0.2, 1.2);
-            el.style.transform = `translate(${startX}px, ${startY}px)`;
-            bubbleContainer.appendChild(el);
+            // clicking or tapping flake triggers pop + small melt animation
+            el.addEventListener('click', (e)=>{ e.stopPropagation(); el.classList.add('snow-melt'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); flakes = flakes.filter(f=>f.el!==el); }, 320); }, {passive:true});
+            el.addEventListener('touchstart', (e)=>{ e.stopPropagation(); el.classList.add('snow-melt'); playPop(); setTimeout(()=>{ if(el.parentElement) el.remove(); flakes = flakes.filter(f=>f.el!==el); }, 320); }, {passive:true});
 
-            const bubble = {
-                el,
-                x: startX,
-                y: startY,
-                vx,
-                vy,
-                size,
-                wobble,
-                created: performance.now(),
-                popping: false
-            };
-            bubbles.push(bubble);
+            snowContainer.appendChild(el);
+            flakes.push({el, x: left, y: -40, vx: drift, vy: speed, size});
         }
 
-        function popBubble(bubble) {
-            if (bubble.popping) return;
-            bubble.popping = true;
-            bubble.el.classList.add('bubble-popping');
-            // Play pop audio if possible (user gesture exists after enter)
-            try {
-                popAudio.currentTime = 0;
-                const p = popAudio.play();
-                if (p && p.catch) p.catch(() => {/* ignore */});
-            } catch (e) {
-                // fallback to synthesized sound
-                playPopSound();
-            }
-            // remove after animation
-            setTimeout(() => {
-                if (bubble.el && bubble.el.parentElement) bubble.el.parentElement.removeChild(bubble.el);
-                const idx = bubbles.indexOf(bubble);
-                if (idx > -1) bubbles.splice(idx, 1);
-            }, 300);
-        }
-
-        let lastFrame = performance.now();
-        function update(now) {
-            const dt = Math.min(now - lastFrame, 40); // cap delta to avoid big jumps
-            lastFrame = now;
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            for (let i = bubbles.length - 1; i >= 0; i--) {
-                const b = bubbles[i];
-                if (b.popping) continue;
-                // simple physics
-                // horizontal gentle sinusoidal wobble + vx
-                b.x += b.vx * (dt / 16.67) + Math.sin((now + i * 100) * 0.002 * b.wobble) * 0.3 * b.size * (dt / 16.67);
-                b.y += b.vy * (dt / 16.67);
-
-                // slight scale/pulse to feel organic
-                const scale = 1 + Math.sin((now + i * 200) * 0.006) * 0.02;
-                b.el.style.transform = `translate(${b.x}px, ${b.y}px) scale(${scale})`;
-
-                // Remove if moved off the top
-                if (b.y + b.size < -80) {
-                    if (b.el && b.el.parentElement) b.el.parentElement.removeChild(b.el);
-                    bubbles.splice(i, 1);
-                    continue;
+        let last = performance.now();
+        function tick(now){ const dt = Math.min(now - last, 40); last = now; const friction = 0.98;
+            for (let i=flakes.length-1;i>=0;i--){ const f=flakes[i]; f.vx *= friction; f.vy = f.vy; f.x += f.vx * (dt/16.67) * 1.6; f.y += f.vy * (dt/16.67);
+                const sway = Math.sin((now/600) + i) * (f.size*0.04);
+                f.el.style.transform = `translate(${f.x + sway}px, ${f.y}px) rotate(${(f.x+f.y)%360}deg)`;
+                if (f.y > window.innerHeight - 18) {
+                    // melt on ground
+                    f.el.classList.add('snow-melt'); playPop();
+                    setTimeout(()=>{ if(f.el.parentElement) f.el.parentElement.removeChild(f.el); }, 300);
+                    flakes.splice(i,1);
                 }
-
-                // Check corner collision (distance to each corner)
-                const cx = b.x + b.size / 2;
-                const cy = b.y + b.size / 2;
-                const corners = [
-                    {x: 0, y: 0},
-                    {x: w, y: 0},
-                    {x: 0, y: h},
-                    {x: w, y: h}
-                ];
-                for (const c of corners) {
-                    const dx = cx - c.x;
-                    const dy = cy - c.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    // threshold based on viewport diagonal and bubble size to feel natural
-                    const threshold = Math.max(48, Math.min(120, Math.hypot(w, h) * 0.04)) + b.size * 0.4;
-                    if (dist < threshold) {
-                        popBubble(b);
-                        break;
-                    }
-                }
-
             }
-            requestAnimationFrame(update);
+            requestAnimationFrame(tick);
         }
 
-        function startBubbles() {
-            if (bubbleInterval) return; // already running
-            // make sure there's at least the container
-            lastFrame = performance.now();
-            // spawn a bit faster on desktop, slower on mobile
-            const spawnRate = (window.innerWidth < 600) ? 900 : 520;
-            bubbleInterval = setInterval(() => {
-                // keep a reasonable number of bubbles
-                if (bubbles.length < 40) createBubble();
-            }, spawnRate);
-            requestAnimationFrame(update);
+        // Start snowfall automatically so user sees effect immediately
+        function startSnow() {
+            // spawn rate tuned: noticeable but not overwhelming
+            const rate = (window.innerWidth < 600) ? 160 : 90; // ms
+            // create a few immediately
+            for (let i=0;i<12;i++) setTimeout(createFlake, i*80);
+            setInterval(()=>{ createFlake(); }, rate);
+            requestAnimationFrame(tick);
         }
 
-        // Stop bubbles when tab hidden to save CPU
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (bubbleInterval) { clearInterval(bubbleInterval); bubbleInterval = null; }
-            } else {
-                startBubbles();
-            }
+        // Start snow immediately so changes are visible without extra gestures
+        startSnow();
+
+        // --- Buttons: touch feedback (add and remove class) ---
+        const buttons = document.querySelectorAll('.link-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('touchstart', ()=> btn.classList.add('touch-press'), {passive:true});
+            btn.addEventListener('touchend', ()=> btn.classList.remove('touch-press'), {passive:true});
+            btn.addEventListener('mousedown', ()=> btn.classList.add('touch-press'));
+            btn.addEventListener('mouseup', ()=> btn.classList.remove('touch-press'));
+            btn.addEventListener('mouseleave', ()=> btn.classList.remove('touch-press'));
         });
 
+        // Keep video unmute attempt on first interaction anywhere (extra convenience)
+        document.addEventListener('click', function onceUnmute(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', onceUnmute); }, {passive:true});
+
+        // Make layout visually balanced: if 7 buttons, grid auto-wrap ensures two rows. No extra JS needed.
+
+        // Handle resize: ensure flakes remain within bounds
+        window.addEventListener('resize', ()=>{ flakes.forEach(f=>{ f.x = Math.min(Math.max(6, f.x), window.innerWidth - (f.size+6)); }); });
     </script>
 </body>
 </html>
