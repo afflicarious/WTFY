@@ -10,40 +10,51 @@
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#000;display:flex;align-items:center;justify-content:center;position:relative}
 
     /* Background video */
-    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3}
-    body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.28),rgba(0,0,0,0.36));z-index:-2}
+    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-4}
+    body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.28),rgba(0,0,0,0.36));z-index:-3}
+
+    /* Storm canvas (below bubbles) */
+    #stormCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:-2;mix-blend-mode:screen;display:block;will-change:transform}
+
+    /* Bubble canvas sits above storm but below UI; pointer-events:none since clicks are handled globally */
+    #bubbleCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:-1;display:block}
 
     /* Splash overlay - visible until user clicks */
     #splashScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:rgba(0,0,0,0.65);cursor:pointer}
     #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))}
     #splashScreen.hidden{display:none}
 
-    /* Glass panel */
-    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center;transition:transform 200ms ease-out}
-    /* Glow around the panel */
+    /* Glass panel (card) with soft white glow */
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center;transition:transform 220ms ease-out;box-shadow:0 8px 40px rgba(255,255,255,0.04), 0 2px 8px rgba(255,255,255,0.02);}
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
-    .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08)}
-    .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;transform:translateY(12px)}
-    .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;transform:translateY(12px)}
+    /* Avatar with coin flip animation */
+    .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08);transform-origin:center;backface-visibility:hidden}
+    @keyframes coinFlip { 0%{transform:perspective(600px) rotateX(80deg) scale(0.6)} 40%{transform:perspective(600px) rotateX(-16deg) scale(1.05)} 70%{transform:perspective(600px) rotateX(6deg) scale(0.98)} 100%{transform:perspective(600px) rotateX(0deg) scale(1)} }
+
+    .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;display:inline-block}
+    .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;display:inline-block}
 
     /* animated entrance - will stagger via inline style delays */
-    @keyframes appearUp {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes appearDown {from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
     /* Links grid: 4 columns (2 rows on desktop) */
     .links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
     @media(max-width:420px){.links-grid{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
 
-    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.95);text-decoration:none}
-    .link-btn:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(138,43,226,0.12)}
-    .link-btn.touch-press{transform:translateY(-1px) scale(.995);box-shadow:0 6px 18px rgba(138,43,226,0.08)}
+    /* Buttons: soft background, inner glow on press */
+    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.95);text-decoration:none;transition:box-shadow 180ms ease, transform 180ms ease}
+    .link-btn:active, .link-btn.active{box-shadow:0 8px 30px rgba(255,255,255,0.12), inset 0 0 18px rgba(255,255,255,0.06)}
 
-    /* Storm canvas: full-screen, behind UI, non-interactive. mix-blend-mode:screen for neon glows */
-    #stormCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:-2;mix-blend-mode:screen;display:block;will-change:transform}
+    /* Magnetic target style (will be transformed via JS) */
+    .magnetic{will-change:transform}
 
-    /* Subtle UI shake class applied during big strikes */
-    .shake{transform:translateY(-6px) rotate(-0.6deg)}
+    /* subtle shimmer on buttons/text when appear */
+    @keyframes shimmer{0%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}50%{filter:drop-shadow(0 0 14px rgba(138,43,226,0.12))}100%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}}
+
+    /* small enable-sound toggle */
+    #soundToggle{position:fixed;right:12px;bottom:12px;z-index:1200;background:rgba(255,255,255,0.03);color:#fff;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:10px;font-size:13px;cursor:pointer}
 
   </style>
 </head>
@@ -52,307 +63,159 @@
     <source src="Cowboy.mp4" type="video/mp4">
   </video>
 
-  <!-- Storm canvas replaces the previous snow container -->
+  <!-- Storm canvas -->
   <canvas id="stormCanvas" aria-hidden="true"></canvas>
+  <!-- Bubble canvas -->
+  <canvas id="bubbleCanvas" aria-hidden="true"></canvas>
 
   <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
   <div class="glass-container" id="glassContainer">
-    <img src="pfp.jpg" alt="Profile" class="profile-image">
-    <h1 class="name" id="nameEl">AFFLY</h1>
-    <p class="bio" id="bioEl">Trying to survive another boring day...</p>
+    <img src="pfp.jpg" alt="Profile" class="profile-image" id="pfp">
+    <h1 class="name" id="nameEl"></h1>
+    <p class="bio" id="bioEl"></p>
 
     <div class="links-grid" id="linksGrid">
-      <a class="link-btn" href="#">Affly Intel</a>
-      <a class="link-btn" href="#">$AFFLY</a>
-      <a class="link-btn" href="#">Affly Forge</a>
-      <a class="link-btn" href="#">Affly Systems</a>
-      <a class="link-btn" href="#">Affly Games</a>
-      <a class="link-btn" href="#">Affly Media</a>
-      <a class="link-btn" href="#">Affly Network</a>
-      <a class="link-btn" href="#">Affly Socials</a>
+      <a class="link-btn magnetic" href="#">Affly Intel</a>
+      <a class="link-btn magnetic" href="#">$AFFLY</a>
+      <a class="link-btn magnetic" href="#">Affly Forge</a>
+      <a class="link-btn magnetic" href="#">Affly Systems</a>
+      <a class="link-btn magnetic" href="#">Affly Games</a>
+      <a class="link-btn magnetic" href="#">Affly Media</a>
+      <a class="link-btn magnetic" href="#">Affly Network</a>
+      <a class="link-btn magnetic" href="#">Affly Socials</a>
     </div>
   </div>
 
-  <script>
-    // --- Elements ---
-    const splash = document.getElementById('splashScreen');
-    const video = document.getElementById('bgVideo');
-    const canvas = document.getElementById('stormCanvas');
-    const glass = document.getElementById('glassContainer');
-    const nameEl = document.getElementById('nameEl');
-    const bioEl = document.getElementById('bioEl');
-    const linkBtns = Array.from(document.querySelectorAll('.link-btn'));
+  <button id="soundToggle" aria-pressed="false">Enable Sound</button>
 
-    // entrance animations for text & buttons (staggered)
-    function staggerAppear(){
-      nameEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; nameEl.style.animationDelay='0.12s';
-      bioEl.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; bioEl.style.animationDelay='0.22s';
-      linkBtns.forEach((b,i)=>{ b.style.animation='appearUp .48s cubic-bezier(.2,.9,.2,1) forwards'; b.style.animationDelay=(0.32 + i*0.06)+'s'; });
+  <script>
+    // --- Small helpers ---
+    function rand(min,max){return Math.random()*(max-min)+min}
+    function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+    // --- Audio: Pop synth for bubbles + integration with AudioManager if present ---
+    let audioCtx = null; let audioUnlocked = false;
+    function ensureAudioContext(){ if (!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } } }
+    function unlockAudioOnGesture(){ if(audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; // create a tiny click sound to unlock
+      const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination);
+      const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(0); o.stop(0.02);
+      audioUnlocked = true; }
+    // synthesized pop
+    function playPopSound(){ ensureAudioContext(); if(!audioCtx || !audioUnlocked) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.value = 0.0001; const b = audioCtx.createBiquadFilter(); b.type='highpass'; b.frequency.value=600; const noiseLen = 0.08; const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * noiseLen, audioCtx.sampleRate); const data = buffer.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/data.length*4); } const src = audioCtx.createBufferSource(); src.buffer = buffer; src.connect(b); b.connect(g); // envelope
+      g.gain.setValueAtTime(0.001, now); g.gain.exponentialRampToValueAtTime(0.16, now + 0.008); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12); src.start(now); src.stop(now + noiseLen + 0.02);
     }
 
-    // Utility
-    function rand(min,max){return Math.random()*(max-min)+min}
+    // If a repository-level AudioManager exists, init it too on gesture
+    function tryInitGlobalAudio(){ if(window.AudioManager && typeof window.AudioManager.init === 'function') try{ window.AudioManager.init(); }catch(e){} }
 
-    // --- Storm implementation (Canvas2D primary; OffscreenCanvas worker fallback for heavier devices) ---
-    (function(){
-      /*
-        Features implemented:
-        - Multi-layered rain with pooling
-        - Procedural purple lightning (branching, multi-strike bursts)
-        - Screen flash + radial glow on major strikes
-        - Synthesized thunder / rumble via WebAudio
-        - Camera shake (UI transform) on major strikes
-        - OffscreenCanvas worker mode when available for heavier rendering
-        - requestAnimationFrame loop with visibility throttling
-      */
+    // --- Bubble System ---
+    const bubbleCanvas = document.getElementById('bubbleCanvas');
+    const bCtx = bubbleCanvas.getContext('2d');
+    let bW = 0, bH = 0, bDPR = 1;
+    const bubbles = []; // pool
+    const bubbleParticles = []; // burst particles
+    const MAX_BUBBLES = 80;
 
-      const CONFIG = {
-        rain: {
-          intensity: 1.0,
-          layers: [
-            { z: 0.45, countPer100k: 40, length: [18,40], speed: [120,210], alpha: [0.06,0.12] },
-            { z: 0.75, countPer100k: 60, length: [28,64], speed: [220,360], alpha: [0.12,0.26] },
-            { z: 1.0,  countPer100k: 36, length: [42,120], speed: [420,820], alpha: [0.22,0.5] }
-          ],
-          angle: -18 * Math.PI/180
-        },
-        lightning: {
-          baseInterval: [1800, 5200],
-          burstChance: 0.34,
-          branchDepth: 3,
-          branchChance: 0.34,
-          mainStrokeWidth: 3.6,
-          coreColor: '#FFFFFF',
-          innerGlow: '#E9D5FF',
-          midGlow: '#C084FC',
-          outerGlow: '#A855F7',
-          flashMax: 0.76
-        },
-        performance: { maxFlakesTotal: 1100, dprCap:2 }
-      };
+    function resizeBubbleCanvas(){ bDPR = Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0); }
 
-      let ctx = null;
-      let w=0,h=0,dpr=1;
-      let running=false, rafId=null, lastTs=0;
+    function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(8, 40); const x = rand(r, bW - r); const y = bH + r + rand(0, 60); const vy = -rand(30, 140); const vx = rand(-12,12); const alpha = rand(0.12,0.32); const id = Math.random().toString(36).slice(2,9); bubbles.push({id,x,y,r,vy,vx,alpha,age:0}); }
 
-      // Pools
-      function createPool(n){ const a=new Array(n); for(let i=0;i<n;i++) a[i]={x:0,y:0,len:0,speed:0,alpha:0,w:0}; return a; }
-      let rainLayers = [];
-      let lightningBolts = [];
-      let splashes = [];
-      let flash = { alpha:0 };
-      let intensity = 1.0;
-      let lastLightningAttempt = 0, nextLightningDelay=0;
+    function popBubble(b){ // create burst particles
+      const count = Math.round(clamp(b.r/6,4,12)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(40,220); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.28+Math.random()*0.36, r:rand(1.5,4.0), age:0}); }
+      // play sound
+      playPopSound();
+    }
 
-      // Audio: thunder synth
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      let audioCtx = null;
-      function ensureAudio(){ if(!audioCtx){ try{ audioCtx = new AudioCtx(); }catch(e){ audioCtx=null; } } }
-
-      function playThunder(intensityScale=1){
-        ensureAudio(); if(!audioCtx) return;
-        const nowt = audioCtx.currentTime;
-        // Create noise buffer for rumble
-        const bufferSize = audioCtx.sampleRate * 2.0;
-        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
-        for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/bufferSize*1.4);
-        const noise = audioCtx.createBufferSource(); noise.buffer = noiseBuffer;
-        const noiseFilter = audioCtx.createBiquadFilter(); noiseFilter.type = 'lowpass'; noiseFilter.frequency.value = 600 * Math.max(0.6, intensityScale);
-        const gain = audioCtx.createGain(); gain.gain.value = 0.0;
-
-        noise.connect(noiseFilter); noiseFilter.connect(gain); gain.connect(audioCtx.destination);
-        noise.start(nowt);
-        // Envelope for rumble
-        gain.gain.setValueAtTime(0.0001, nowt);
-        gain.gain.exponentialRampToValueAtTime(0.6 * intensityScale, nowt + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.02, nowt + 1.6 * intensityScale);
-        noise.stop(nowt + 2.2 * intensityScale);
-
-        // add a sharp crack (oscillator) for initial strike
-        const osc = audioCtx.createOscillator(); const oscGain = audioCtx.createGain();
-        osc.type = 'sawtooth'; osc.frequency.value = 1000 * (0.6 + Math.random()*0.8);
-        osc.connect(oscGain); oscGain.connect(audioCtx.destination);
-        oscGain.gain.setValueAtTime(0.0001, nowt);
-        oscGain.gain.exponentialRampToValueAtTime(0.8 * intensityScale, nowt + 0.005);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, nowt + 0.12);
-        osc.start(nowt); osc.stop(nowt + 0.18);
+    function updateBubbles(dt){ // dt in seconds
+      // spawn occasionally
+      if(Math.random() < 0.02) createBubble();
+      for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; // drift
+        // collision with edges -> pop
+        if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; }
+        // lifetime: if fully above screen, remove
+        if(p.y + p.r < -40){ bubbles.splice(i,1); continue; }
       }
+      // update particles
+      for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); }
+    }
 
-      // Resize handling
-      function resize(){
-        dpr = Math.min(window.devicePixelRatio || 1, CONFIG.performance.dprCap);
-        w = Math.max(1, Math.floor(window.innerWidth));
-        h = Math.max(1, Math.floor(window.innerHeight));
-        canvas.width = Math.floor(w * dpr);
-        canvas.height = Math.floor(h * dpr);
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
-        ctx = canvas.getContext('2d');
-        ctx.setTransform(dpr,0,0,dpr,0,0);
-        buildPools();
-      }
+    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); // draw bubbles
+      for(const p of bubbles){ bCtx.save(); // soft translucent bubble with subtle rim
+        const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0, `rgba(255,255,255,${p.alpha*0.9})`); grd.addColorStop(0.4, `rgba(220,240,255,${p.alpha*0.24})`); grd.addColorStop(1, `rgba(140,190,230,${p.alpha*0.14})`);
+        bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x,p.y,p.r,0,Math.PI*2); bCtx.fill(); // rim
+        bCtx.strokeStyle = `rgba(255,255,255,${p.alpha*0.45})`; bCtx.lineWidth = 1; bCtx.stroke(); bCtx.restore(); }
+      // draw particles
+      for(const sp of bubbleParticles){ bCtx.save(); bCtx.globalAlpha = Math.max(0, 1 - (sp.age/sp.life)); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); }
+    }
 
-      function buildPools(){
-        rainLayers.length = 0;
-        const area100k = (w*h)/100000;
-        CONFIG.rain.layers.forEach(cfg => {
-          const count = Math.min(Math.max(4, Math.floor(cfg.countPer100k * area100k * cfg.z * CONFIG.rain.intensity * intensity)), CONFIG.performance.maxFlakesTotal);
-          const pool = createPool(count);
-          for (let i=0;i<count;i++) resetParticle({cfg,pool,poolSize:count}, pool[i], true);
-          rainLayers.push({cfg,pool,poolSize:count});
-        });
-      }
+    // detect clicks/taps — since bubble canvas is pointer-events:none, we listen globally
+    function handlePointerDown(e){ const rect = {left:0,top:0}; const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); // find topmost bubble under pointer
+      for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= b.r*b.r){ popBubble(b); bubbles.splice(i,1); break; } }
+      // unlock audio on first gesture
+      unlockAudioOnGesture(); tryInitGlobalAudio(); }
 
-      function resetParticle(layer, p, initial){
-        const cfg = layer.cfg;
-        p.x = rand(-60, w+60);
-        p.y = initial ? rand(-h, h) : rand(-140, -6);
-        p.len = rand(cfg.length[0], cfg.length[1]);
-        p.speed = rand(cfg.speed[0], cfg.speed[1]);
-        p.alpha = rand(cfg.alpha[0], cfg.alpha[1]);
-        p.w = Math.max(0.6, 0.85 * cfg.z + rand(0.1,1.6));
-      }
+    // Edge collision pop: handled in update loop when position touches edges
 
-      function updateRain(dt){
-        const angle = CONFIG.rain.angle;
-        rainLayers.forEach(layer => {
-          const pool = layer.pool;
-          const z = layer.cfg.z;
-          for (let i=0;i<layer.poolSize;i++){
-            const p = pool[i];
-            p.x += Math.cos(angle) * p.speed * dt * z * intensity;
-            p.y += Math.sin(angle) * p.speed * dt * z * intensity;
-            if (p.y > h + 120 || p.x > w + 120 || p.x < -240){
-              // spawn splash sometimes when near bottom
-              if (p.y > h - 12 && Math.random() < 0.2) spawnSplash(Math.min(Math.max(4, p.x), w-4), h - 10, Math.min(1, p.speed/900));
-              resetParticle(layer, p, false);
-            }
-          }
-        });
-      }
+    // --- Magnetic button effect & button animations ---
+    const magneticEls = Array.from(document.querySelectorAll('.magnetic'));
+    const pointer = {x: window.innerWidth/2, y: window.innerHeight/2};
+    let magneticRAF = null;
+    function onPointerMove(e){ pointer.x = e.clientX; pointer.y = e.clientY; if(!magneticRAF) magneticRAF = requestAnimationFrame(updateMagnetic); }
+    function updateMagnetic(){ magneticRAF = null; for(const el of magneticEls){ const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.hypot(dx,dy); const maxDist = Math.max(120, r.width*1.2); if(dist < maxDist){ const strength = (1 - (dist/maxDist)); const tx = clamp(dx * 0.18 * strength, -16, 16); const ty = clamp(dy * 0.12 * strength, -10, 10); el.style.transform = `translate(${tx}px, ${ty}px) scale(${1 + 0.02*strength})`; el.style.boxShadow = `0 ${6*strength}px ${18*strength}px rgba(168,144,255,${0.08 + 0.06*strength})`; } else { el.style.transform = ''; el.style.boxShadow = ''; } } }
+    function onPointerLeave(){ if(magneticRAF){ cancelAnimationFrame(magneticRAF); magneticRAF = null; } magneticEls.forEach(el=>{ el.style.transform=''; el.style.boxShadow=''; }); }
 
-      function drawRain(){
-        rainLayers.forEach(layer => {
-          const pool = layer.pool;
-          const z = layer.cfg.z;
-          for (let i=0;i<layer.poolSize;i++){
-            const p = pool[i];
-            const dx = Math.cos(CONFIG.rain.angle) * p.len;
-            const dy = Math.sin(CONFIG.rain.angle) * p.len;
-            ctx.save();
-            ctx.globalAlpha = Math.min(1, p.alpha) * (0.8 + z*0.2);
-            if (z > 0.9){ ctx.shadowColor = 'rgba(176,118,255,0.08)'; ctx.shadowBlur = 10; }
-            ctx.lineWidth = Math.max(1, p.w);
-            const g = ctx.createLinearGradient(p.x, p.y, p.x+dx, p.y+dy);
-            g.addColorStop(0, `rgba(170,180,255,${0.06 * p.alpha})`);
-            g.addColorStop(0.6, `rgba(200,210,255,${0.28 * p.alpha})`);
-            g.addColorStop(1, `rgba(240,245,255,${0.86 * p.alpha})`);
-            ctx.strokeStyle = g;
-            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+dx, p.y+dy); ctx.stroke();
-            ctx.restore();
-          }
-        });
-      }
+    // --- Page Load Animations: Avatar flip + typewriter + staggered buttons ---
+    const nameText = 'AFFLY';
+    const bioText = 'Trying to survive another boring day...';
+    function animateAvatar(){ const img = document.getElementById('pfp'); img.style.animation = 'coinFlip 900ms cubic-bezier(.2,.9,.25,1)'; img.addEventListener('animationend', ()=>{ img.style.animation=''; }); }
 
-      function spawnSplash(x, y, intensityScale){ splashes.push({x,y,r:rand(6,22)*intensityScale,alpha:1,life:0.32 + Math.random()*0.5}); }
-      function updateSplashes(dt){ for (let i=splashes.length-1;i>=0;i--){ const s=splashes[i]; s.life -= dt; s.alpha = Math.max(0, s.life*2); s.r += 32*dt; if (s.life<=0) splashes.splice(i,1); } }
-      function drawSplashes(){ if (!splashes.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; for (const s of splashes){ ctx.beginPath(); ctx.strokeStyle = `rgba(220,200,255,${0.32 * s.alpha})`; ctx.lineWidth = 1.4; ctx.arc(s.x, s.y, s.r*0.5, 0, Math.PI*2); ctx.stroke(); } ctx.restore(); }
+    async function typeWriter(el, text, speed=48){ el.textContent = ''; for(let i=0;i<text.length;i++){ el.textContent += text[i]; await new Promise(r=>setTimeout(r, speed + Math.random()*12)); } }
 
-      // Lightning builder
-      function buildBolt(x0,y0,x1,y1,depth){ const dx=x1-x0, dy=y1-y0; const dist=Math.hypot(dx,dy); const steps=Math.max(6, Math.floor(dist/10)); const segs=[]; for (let i=1;i<=steps;i++){ const t=i/steps; let cx=x0+dx*t, cy=y0+dy*t; const offset=(Math.sin(t*Math.PI)*(dist*0.08))*(rand(-1,1)); const nx = -dy/dist||0, ny = dx/dist||0; cx += nx*offset; cy += ny*offset; segs.push({x:cx,y:cy,t}); if (depth>0 && Math.random()<CONFIG.lightning.branchChance){ const branchLen = rand(0.12,0.45)*dist; const angle = Math.atan2(dy,dx)+rand(-1.4,1.4); const bx = cx + Math.cos(angle)*branchLen; const by = cy + Math.sin(angle)*branchLen; lightningBolts.push({segments: buildBolt(cx,cy,bx,by,depth-1), life:0.06 + Math.random()*0.14, thickness: Math.max(0.6, CONFIG.lightning.mainStrokeWidth*Math.pow(0.66, depth))}); } } return segs; }
+    function animateEntrance(){ // card slight pop + staggered buttons
+      const card = document.getElementById('glassContainer'); card.style.opacity = 0; card.style.transform = 'translateY(-8px)'; requestAnimationFrame(()=>{ card.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1), opacity 380ms ease'; card.style.opacity = 1; card.style.transform = 'translateY(0)'; });
+      // stagger buttons
+      magneticEls.forEach((el,i)=>{ el.style.opacity = 0; el.style.transform += ' translateY(-10px)'; setTimeout(()=>{ el.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1), opacity 300ms ease'; el.style.opacity=1; el.style.transform = el.style.transform.replace(' translateY(-10px)',''); }, 380 + i*70); }); }
 
-      function createLightningStrike(major=false){ const startX = rand(0.08*w,0.92*w); const startY = rand(0,0.08*h); const endX = rand(0.12*w,0.88*w); const endY = rand(0.35*h,0.95*h); const main = buildBolt(startX,startY,endX,endY, CONFIG.lightning.branchDepth); lightningBolts.push({segments:[{x:startX,y:startY}, ...main], life: 0.08 + rand(0.06,0.22), thickness: CONFIG.lightning.mainStrokeWidth * (major?1.6:1.0)}); if (major){ flash.alpha = Math.max(flash.alpha, CONFIG.lightning.flashMax * rand(0.8,1.0)); // camera shake
-        doCameraShake(14, 420);
-        // thunder sound after short delay
-        setTimeout(()=>playThunder(1.0 + Math.random()*0.9), rand(60,220));
-        const extras = 1 + Math.floor(rand(0,3)); for (let i=0;i<extras;i++) setTimeout(()=>createLightningStrike(Math.random()<0.5), rand(60,420)); } else { flash.alpha = Math.max(flash.alpha, 0.12 * rand(0.4,1.0)); setTimeout(()=>playThunder(0.32 + Math.random()*0.6), rand(160,420)); } }
+    // --- Integrate with existing StormEngine: ensure storm starts independently of clicks ---
+    try{ if(window.StormEngine && typeof window.StormEngine.start === 'function'){ /* don't auto-start sound here */ } }catch(e){}
 
-      function scheduleNextLightning(){ const [l,hv] = CONFIG.lightning.baseInterval; const base = rand(l,hv); nextLightningDelay = base * (1 - 0.5*intensity); lastLightningAttempt = performance.now(); }
-      function tryLightning(ts){ if (ts - lastLightningAttempt < nextLightningDelay) return; if (Math.random() < 0.22 * intensity) { // chance to be major
-          const major = Math.random() < 0.28*intensity; if (Math.random() < CONFIG.lightning.burstChance*intensity){ const burst = 2 + Math.floor(rand(1,4)*intensity); for (let i=0;i<burst;i++) setTimeout(()=>createLightningStrike(Math.random()<0.5||major), rand(i*40, i*180+60)); } else createLightningStrike(major); }
-        scheduleNextLightning(); }
+    // --- Main loop for bubbles ---
+    let lastFrame = performance.now();
+    function frame(now){ const dt = Math.min(0.045, (now - lastFrame)/1000); updateBubbles(dt); drawBubbles(); lastFrame = now; requestAnimationFrame(frame); }
 
-      function drawBolts(dt){ if (!lightningBolts.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; for (let i=lightningBolts.length-1;i>=0;i--){ const bolt = lightningBolts[i]; bolt.life -= dt; const lf = Math.max(0, bolt.life/0.3); const alpha = Math.pow(lf,0.6);
-            ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle = CONFIG.lightning.outerGlow; ctx.lineWidth = (bolt.thickness*8)*(0.6+lf*0.6); ctx.shadowBlur=22; ctx.shadowColor=CONFIG.lightning.outerGlow; drawBoltPath(bolt.segments, alpha*0.18);
-            ctx.strokeStyle = CONFIG.lightning.midGlow; ctx.lineWidth = (bolt.thickness*4)*(0.6+lf*0.4); ctx.shadowBlur=12; ctx.shadowColor=CONFIG.lightning.midGlow; drawBoltPath(bolt.segments, alpha*0.26);
-            ctx.strokeStyle = CONFIG.lightning.innerGlow; ctx.lineWidth = Math.max(1.2, bolt.thickness*2)*(0.8+lf*0.4); ctx.shadowBlur=8; ctx.shadowColor=CONFIG.lightning.innerGlow; drawBoltPath(bolt.segments, alpha*0.34);
-            ctx.strokeStyle = CONFIG.lightning.coreColor; ctx.lineWidth = Math.max(0.8, bolt.thickness*0.8); ctx.shadowBlur=0; drawBoltPath(bolt.segments, alpha*0.95);
-            if (bolt.life<=0) lightningBolts.splice(i,1);
-      } ctx.restore(); }
-      function drawBoltPath(pts,alpha){ if(!pts||pts.length<2) return; ctx.globalAlpha = alpha; ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i=1;i<pts.length;i++){ ctx.lineTo(pts[i].x, pts[i].y); } ctx.stroke(); }
+    // Events
+    window.addEventListener('resize', ()=>{ resizeBubbleCanvas(); }, {passive:true});
+    window.addEventListener('pointerdown', handlePointerDown, {passive:true});
+    window.addEventListener('mousemove', onPointerMove, {passive:true});
+    window.addEventListener('mouseleave', onPointerLeave, {passive:true});
 
-      // Camera shake: apply to glass container
-      let shakeTimer = 0;
-      function doCameraShake(strength=8, duration=400){ if (!glass) return; shakeTimer = duration; const start = performance.now(); glass.classList.add('shake'); const iv = setInterval(()=>{
-          const t = performance.now() - start; if (t >= duration){ clearInterval(iv); glass.classList.remove('shake'); }
-          const pct = 1 - (t/duration); const x = (Math.random()*2-1)*strength*pct; const y = (Math.random()*2-1)*(strength*0.4)*pct; const r = (Math.random()*2-1)*0.6*pct; glass.style.transform = `translate(${x}px, ${-Math.abs(y)}px) rotate(${r}deg)`;
-        }, 16);
-      }
+    // Sound toggle
+    const soundToggle = document.getElementById('soundToggle');
+    let soundEnabled = localStorage.getItem('affly_sound') === '1';
+    function updateSoundUI(){ soundToggle.textContent = soundEnabled? 'Sound: On' : 'Enable Sound'; soundToggle.setAttribute('aria-pressed', soundEnabled? 'true':'false'); }
+    soundToggle.addEventListener('click', ()=>{ soundEnabled = !soundEnabled; localStorage.setItem('affly_sound', soundEnabled? '1':'0'); if(soundEnabled){ unlockAudioOnGesture(); tryInitGlobalAudio(); } updateSoundUI(); });
+    updateSoundUI();
 
-      function drawFlash(alpha){ if (alpha <= 0.003) return; ctx.save(); ctx.globalCompositeOperation='lighter'; const cx = w * rand(0.28,0.72); const cy = h * rand(0.08,0.52); const r = Math.max(w,h) * 0.9; const g = ctx.createRadialGradient(cx,cy,20,cx,cy,r); g.addColorStop(0, `rgba(255,255,255,${0.85*alpha})`); g.addColorStop(0.12, `rgba(233,213,255,${0.42*alpha})`); g.addColorStop(0.22, `rgba(192,132,252,${0.28*alpha})`); g.addColorStop(1, `rgba(0,0,0,0)`); ctx.fillStyle = g; ctx.fillRect(0,0,w,h); ctx.restore(); }
+    // Unlock audio when user clicks splash; but thunder shouldn't be tied to click
+    document.addEventListener('pointerdown', ()=>{ if(soundEnabled) unlockAudioOnGesture(); }, {passive:true});
 
-      // Main update/draw loop
-      function loop(ts){ if (!running) return; const dt = Math.min(0.06, Math.max(0.0001, (ts - lastTs)/1000 || (1/60))); if (document.hidden){ lastTs = ts; rafId = requestAnimationFrame(loop); return; }
-        updateRain(dt); updateSplashes(dt); tryLightning(ts); flash.alpha = Math.max(0, flash.alpha - dt * 1.8);
-        // clear
-        ctx.clearRect(0,0,w,h);
-        drawRain(); drawSplashes(); drawBolts(dt);
-        if (flash.alpha>0.003) drawFlash(flash.alpha);
-        lastTs = ts; rafId = requestAnimationFrame(loop);
-      }
+    // Boot
+    resizeBubbleCanvas(); frame(performance.now()); // start bubble loop
 
-      // Public controls
-      function start(){ if (running) return; running=true; lastTs = performance.now(); rafId = requestAnimationFrame(loop); }
-      function stop(){ running=false; if (rafId) cancelAnimationFrame(rafId); rafId=null; lightningBolts.length=0; rainLayers.length=0; splashes.length=0; ctx && ctx.clearRect(0,0,w,h); }
-      function pause(){ stop(); }
-      function resume(){ start(); }
-      function setIntensity(v){ intensity = Math.max(0, Math.min(1.6, v)); buildPools(); }
-
-      // init
-      function init(){ if (!canvas) return; canvas.style.pointerEvents='none'; window.addEventListener('resize', resize, {passive:true}); document.addEventListener('visibilitychange', ()=>{ if (document.hidden) pause(); else resume(); }); resize(); scheduleNextLightning(); }
-
-      // schedule first lightning
-      function scheduleNextLightning(){ const [l,hv]=CONFIG.lightning.baseInterval; const base = rand(l,hv); nextLightningDelay = base * (1 - 0.5*intensity); lastLightningAttempt = performance.now(); }
-
-      // Expose global
-      window.StormEngine = { init, start, stop, pause, resume, setIntensity };
-
-      // Auto-init
-      init();
-
-    })();
-
-    // Wire start to splash click (replace old startSnow behavior)
+    // Run load animations when splash clicked
     splash.addEventListener('click', ()=>{
       splash.classList.add('hidden');
       try{ video.muted=false; video.play().catch(()=>{}); }catch(e){}
-      staggerAppear();
-      // initialize audio context on user gesture
-      try{ if(typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') { const ac = new (window.AudioContext||window.webkitAudioContext)(); ac.close(); } }catch(e){}
-      // Start storm and set intensity
-      StormStartHelper();
+      animateAvatar(); animateEntrance(); // typewriter
+      (async ()=>{ await typeWriter(nameEl, nameText, 48); await new Promise(r=>setTimeout(r,200)); await typeWriter(bioEl, bioText, 28); })();
+      // initialize global audio if user allowed
+      if(localStorage.getItem('affly_sound')==='1') { unlockAudioOnGesture(); tryInitGlobalAudio(); }
+      // start storm engine (if available)
+      try{ if(window.StormEngine){ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); } }catch(e){}
     }, {passive:true});
 
-    // Helper to start storm (handles offscreen option in future) and hook into StormEngine
-    function StormStartHelper(){
-      try{ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); }catch(e){ console.warn('Storm failed to start:', e); }
-    }
-
-    // Extra: unmute on any interaction as convenience
-    document.addEventListener('click', function unmuteOnce(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', unmuteOnce); }, {passive:true});
-
-    // Button touch feedback
-    linkBtns.forEach(btn=>{
-      btn.addEventListener('touchstart', ()=>btn.classList.add('touch-press'), {passive:true});
-      btn.addEventListener('touchend', ()=>btn.classList.remove('touch-press'), {passive:true});
-      btn.addEventListener('mousedown', ()=>btn.classList.add('touch-press'));
-      btn.addEventListener('mouseup', ()=>btn.classList.remove('touch-press'));
-      btn.addEventListener('mouseleave', ()=>btn.classList.remove('touch-press'));
-    });
-
-    // Accessibility: allow Enter key to enter (start storm)
+    // Accessibility: allow Enter key to enter (start)
     document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !splash.classList.contains('hidden')){ splash.click(); } });
 
   </script>
