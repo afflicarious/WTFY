@@ -19,7 +19,7 @@
     #splashScreen.hidden{display:none}
 
     /* Glass panel */
-    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center}
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center;transition:transform 200ms ease-out}
     /* Glow around the panel */
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
@@ -39,23 +39,11 @@
     .link-btn:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(138,43,226,0.12)}
     .link-btn.touch-press{transform:translateY(-1px) scale(.995);box-shadow:0 6px 18px rgba(138,43,226,0.08)}
 
-    /* Snowfall area with pixel-style snowflake SVGs */
-    #snowContainer{position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:-1}
-    .flake{position:absolute;top:-12vh;width:28px;height:28px;opacity:0.98;transform:translate3d(0,0,0)}
-    .flake svg{width:100%;height:100%;display:block}
-    .flake .pix{fill:rgba(192,241,255,0.96);stroke:rgba(176,230,255,0.9);stroke-width:0.4}
+    /* Storm canvas: full-screen, behind UI, non-interactive. mix-blend-mode:screen for neon glows */
+    #stormCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:-2;mix-blend-mode:screen;display:block;will-change:transform}
 
-    /* falling animation: translate down and drift horizontally */
-    @keyframes snowFall { to{transform:translate3d(var(--dx,0px),120vh,0) rotate(var(--rot,360deg));opacity:0.94} }
-
-    /* gentle internal animation to make flakes look alive */
-    @keyframes floatAnim { 0%{transform:translateY(0) rotate(0) scale(1)} 50%{transform:translateY(-6%) rotate(6deg) scale(0.98)} 100%{transform:translateY(0) rotate(0) scale(1)} }
-
-    /* apply float to the inner svg so falling and float can run together */
-    .flake svg{animation: floatAnim 3.6s ease-in-out infinite; transform-origin:50% 50%}
-
-    /* subtle shimmer on buttons/text when appear */
-    @keyframes shimmer{0%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}50%{filter:drop-shadow(0 0 14px rgba(138,43,226,0.12))}100%{filter:drop-shadow(0 0 0 rgba(138,43,226,0))}}
+    /* Subtle UI shake class applied during big strikes */
+    .shake{transform:translateY(-6px) rotate(-0.6deg)}
 
   </style>
 </head>
@@ -64,7 +52,8 @@
     <source src="Cowboy.mp4" type="video/mp4">
   </video>
 
-  <div id="snowContainer" aria-hidden="true"></div>
+  <!-- Storm canvas replaces the previous snow container -->
+  <canvas id="stormCanvas" aria-hidden="true"></canvas>
 
   <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
@@ -89,7 +78,8 @@
     // --- Elements ---
     const splash = document.getElementById('splashScreen');
     const video = document.getElementById('bgVideo');
-    const snowContainer = document.getElementById('snowContainer');
+    const canvas = document.getElementById('stormCanvas');
+    const glass = document.getElementById('glassContainer');
     const nameEl = document.getElementById('nameEl');
     const bioEl = document.getElementById('bioEl');
     const linkBtns = Array.from(document.querySelectorAll('.link-btn'));
@@ -104,72 +94,251 @@
     // Utility
     function rand(min,max){return Math.random()*(max-min)+min}
 
-    // Pixel-style snowflake SVG (a compact template using groups rotated around center)
-    function pixelSnowSVG(){
-      /* This builds a simple pixel-art snowflake using small rect blocks arranged on a 7x7-ish grid for one arm,
-         then replicates the arm around the center to create a six-armed flake. It's intentionally blocky to match the
-         example image. */
-      return `
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g transform="translate(32,32)">
-            <!-- central ring -->
-            <rect x="-6" y="-6" width="12" height="12" class="pix" rx="1"/>
-            <!-- define a single arm in a group, positioned to the right, then rotate copies -->
-            <g id="arm" transform="translate(16,0)">
-              <rect x="-2" y="-2" width="4" height="4" class="pix"/>
-              <rect x="4" y="-6" width="6" height="4" class="pix"/>
-              <rect x="4" y="-12" width="4" height="4" class="pix"/>
-              <rect x="10" y="-4" width="4" height="4" class="pix"/>
-              <rect x="10" y="0" width="4" height="4" class="pix"/>
-              <rect x="6" y="4" width="4" height="4" class="pix"/>
-            </g>
-            <!-- replicate the arm 6 times -->
-            <g>
-              <use href="#arm" transform="rotate(0)"/>
-              <use href="#arm" transform="rotate(60)"/>
-              <use href="#arm" transform="rotate(120)"/>
-              <use href="#arm" transform="rotate(180)"/>
-              <use href="#arm" transform="rotate(240)"/>
-              <use href="#arm" transform="rotate(300)"/>
-            </g>
-          </g>
-        </svg>
-      `;
+    // --- Storm implementation (Canvas2D primary; OffscreenCanvas worker fallback for heavier devices) ---
+    (function(){
+      /*
+        Features implemented:
+        - Multi-layered rain with pooling
+        - Procedural purple lightning (branching, multi-strike bursts)
+        - Screen flash + radial glow on major strikes
+        - Synthesized thunder / rumble via WebAudio
+        - Camera shake (UI transform) on major strikes
+        - OffscreenCanvas worker mode when available for heavier rendering
+        - requestAnimationFrame loop with visibility throttling
+      */
+
+      const CONFIG = {
+        rain: {
+          intensity: 1.0,
+          layers: [
+            { z: 0.45, countPer100k: 40, length: [18,40], speed: [120,210], alpha: [0.06,0.12] },
+            { z: 0.75, countPer100k: 60, length: [28,64], speed: [220,360], alpha: [0.12,0.26] },
+            { z: 1.0,  countPer100k: 36, length: [42,120], speed: [420,820], alpha: [0.22,0.5] }
+          ],
+          angle: -18 * Math.PI/180
+        },
+        lightning: {
+          baseInterval: [1800, 5200],
+          burstChance: 0.34,
+          branchDepth: 3,
+          branchChance: 0.34,
+          mainStrokeWidth: 3.6,
+          coreColor: '#FFFFFF',
+          innerGlow: '#E9D5FF',
+          midGlow: '#C084FC',
+          outerGlow: '#A855F7',
+          flashMax: 0.76
+        },
+        performance: { maxFlakesTotal: 1100, dprCap:2 }
+      };
+
+      let ctx = null;
+      let w=0,h=0,dpr=1;
+      let running=false, rafId=null, lastTs=0;
+
+      // Pools
+      function createPool(n){ const a=new Array(n); for(let i=0;i<n;i++) a[i]={x:0,y:0,len:0,speed:0,alpha:0,w:0}; return a; }
+      let rainLayers = [];
+      let lightningBolts = [];
+      let splashes = [];
+      let flash = { alpha:0 };
+      let intensity = 1.0;
+      let lastLightningAttempt = 0, nextLightningDelay=0;
+
+      // Audio: thunder synth
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      let audioCtx = null;
+      function ensureAudio(){ if(!audioCtx){ try{ audioCtx = new AudioCtx(); }catch(e){ audioCtx=null; } } }
+
+      function playThunder(intensityScale=1){
+        ensureAudio(); if(!audioCtx) return;
+        const nowt = audioCtx.currentTime;
+        // Create noise buffer for rumble
+        const bufferSize = audioCtx.sampleRate * 2.0;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/bufferSize*1.4);
+        const noise = audioCtx.createBufferSource(); noise.buffer = noiseBuffer;
+        const noiseFilter = audioCtx.createBiquadFilter(); noiseFilter.type = 'lowpass'; noiseFilter.frequency.value = 600 * Math.max(0.6, intensityScale);
+        const gain = audioCtx.createGain(); gain.gain.value = 0.0;
+
+        noise.connect(noiseFilter); noiseFilter.connect(gain); gain.connect(audioCtx.destination);
+        noise.start(nowt);
+        // Envelope for rumble
+        gain.gain.setValueAtTime(0.0001, nowt);
+        gain.gain.exponentialRampToValueAtTime(0.6 * intensityScale, nowt + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.02, nowt + 1.6 * intensityScale);
+        noise.stop(nowt + 2.2 * intensityScale);
+
+        // add a sharp crack (oscillator) for initial strike
+        const osc = audioCtx.createOscillator(); const oscGain = audioCtx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.value = 1000 * (0.6 + Math.random()*0.8);
+        osc.connect(oscGain); oscGain.connect(audioCtx.destination);
+        oscGain.gain.setValueAtTime(0.0001, nowt);
+        oscGain.gain.exponentialRampToValueAtTime(0.8 * intensityScale, nowt + 0.005);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, nowt + 0.12);
+        osc.start(nowt); osc.stop(nowt + 0.18);
+      }
+
+      // Resize handling
+      function resize(){
+        dpr = Math.min(window.devicePixelRatio || 1, CONFIG.performance.dprCap);
+        w = Math.max(1, Math.floor(window.innerWidth));
+        h = Math.max(1, Math.floor(window.innerHeight));
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        buildPools();
+      }
+
+      function buildPools(){
+        rainLayers.length = 0;
+        const area100k = (w*h)/100000;
+        CONFIG.rain.layers.forEach(cfg => {
+          const count = Math.min(Math.max(4, Math.floor(cfg.countPer100k * area100k * cfg.z * CONFIG.rain.intensity * intensity)), CONFIG.performance.maxFlakesTotal);
+          const pool = createPool(count);
+          for (let i=0;i<count;i++) resetParticle({cfg,pool,poolSize:count}, pool[i], true);
+          rainLayers.push({cfg,pool,poolSize:count});
+        });
+      }
+
+      function resetParticle(layer, p, initial){
+        const cfg = layer.cfg;
+        p.x = rand(-60, w+60);
+        p.y = initial ? rand(-h, h) : rand(-140, -6);
+        p.len = rand(cfg.length[0], cfg.length[1]);
+        p.speed = rand(cfg.speed[0], cfg.speed[1]);
+        p.alpha = rand(cfg.alpha[0], cfg.alpha[1]);
+        p.w = Math.max(0.6, 0.85 * cfg.z + rand(0.1,1.6));
+      }
+
+      function updateRain(dt){
+        const angle = CONFIG.rain.angle;
+        rainLayers.forEach(layer => {
+          const pool = layer.pool;
+          const z = layer.cfg.z;
+          for (let i=0;i<layer.poolSize;i++){
+            const p = pool[i];
+            p.x += Math.cos(angle) * p.speed * dt * z * intensity;
+            p.y += Math.sin(angle) * p.speed * dt * z * intensity;
+            if (p.y > h + 120 || p.x > w + 120 || p.x < -240){
+              // spawn splash sometimes when near bottom
+              if (p.y > h - 12 && Math.random() < 0.2) spawnSplash(Math.min(Math.max(4, p.x), w-4), h - 10, Math.min(1, p.speed/900));
+              resetParticle(layer, p, false);
+            }
+          }
+        });
+      }
+
+      function drawRain(){
+        rainLayers.forEach(layer => {
+          const pool = layer.pool;
+          const z = layer.cfg.z;
+          for (let i=0;i<layer.poolSize;i++){
+            const p = pool[i];
+            const dx = Math.cos(CONFIG.rain.angle) * p.len;
+            const dy = Math.sin(CONFIG.rain.angle) * p.len;
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, p.alpha) * (0.8 + z*0.2);
+            if (z > 0.9){ ctx.shadowColor = 'rgba(176,118,255,0.08)'; ctx.shadowBlur = 10; }
+            ctx.lineWidth = Math.max(1, p.w);
+            const g = ctx.createLinearGradient(p.x, p.y, p.x+dx, p.y+dy);
+            g.addColorStop(0, `rgba(170,180,255,${0.06 * p.alpha})`);
+            g.addColorStop(0.6, `rgba(200,210,255,${0.28 * p.alpha})`);
+            g.addColorStop(1, `rgba(240,245,255,${0.86 * p.alpha})`);
+            ctx.strokeStyle = g;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+dx, p.y+dy); ctx.stroke();
+            ctx.restore();
+          }
+        });
+      }
+
+      function spawnSplash(x, y, intensityScale){ splashes.push({x,y,r:rand(6,22)*intensityScale,alpha:1,life:0.32 + Math.random()*0.5}); }
+      function updateSplashes(dt){ for (let i=splashes.length-1;i>=0;i--){ const s=splashes[i]; s.life -= dt; s.alpha = Math.max(0, s.life*2); s.r += 32*dt; if (s.life<=0) splashes.splice(i,1); } }
+      function drawSplashes(){ if (!splashes.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; for (const s of splashes){ ctx.beginPath(); ctx.strokeStyle = `rgba(220,200,255,${0.32 * s.alpha})`; ctx.lineWidth = 1.4; ctx.arc(s.x, s.y, s.r*0.5, 0, Math.PI*2); ctx.stroke(); } ctx.restore(); }
+
+      // Lightning builder
+      function buildBolt(x0,y0,x1,y1,depth){ const dx=x1-x0, dy=y1-y0; const dist=Math.hypot(dx,dy); const steps=Math.max(6, Math.floor(dist/10)); const segs=[]; for (let i=1;i<=steps;i++){ const t=i/steps; let cx=x0+dx*t, cy=y0+dy*t; const offset=(Math.sin(t*Math.PI)*(dist*0.08))*(rand(-1,1)); const nx = -dy/dist||0, ny = dx/dist||0; cx += nx*offset; cy += ny*offset; segs.push({x:cx,y:cy,t}); if (depth>0 && Math.random()<CONFIG.lightning.branchChance){ const branchLen = rand(0.12,0.45)*dist; const angle = Math.atan2(dy,dx)+rand(-1.4,1.4); const bx = cx + Math.cos(angle)*branchLen; const by = cy + Math.sin(angle)*branchLen; lightningBolts.push({segments: buildBolt(cx,cy,bx,by,depth-1), life:0.06 + Math.random()*0.14, thickness: Math.max(0.6, CONFIG.lightning.mainStrokeWidth*Math.pow(0.66, depth))}); } } return segs; }
+
+      function createLightningStrike(major=false){ const startX = rand(0.08*w,0.92*w); const startY = rand(0,0.08*h); const endX = rand(0.12*w,0.88*w); const endY = rand(0.35*h,0.95*h); const main = buildBolt(startX,startY,endX,endY, CONFIG.lightning.branchDepth); lightningBolts.push({segments:[{x:startX,y:startY}, ...main], life: 0.08 + rand(0.06,0.22), thickness: CONFIG.lightning.mainStrokeWidth * (major?1.6:1.0)}); if (major){ flash.alpha = Math.max(flash.alpha, CONFIG.lightning.flashMax * rand(0.8,1.0)); // camera shake
+        doCameraShake(14, 420);
+        // thunder sound after short delay
+        setTimeout(()=>playThunder(1.0 + Math.random()*0.9), rand(60,220));
+        const extras = 1 + Math.floor(rand(0,3)); for (let i=0;i<extras;i++) setTimeout(()=>createLightningStrike(Math.random()<0.5), rand(60,420)); } else { flash.alpha = Math.max(flash.alpha, 0.12 * rand(0.4,1.0)); setTimeout(()=>playThunder(0.32 + Math.random()*0.6), rand(160,420)); } }
+
+      function scheduleNextLightning(){ const [l,hv] = CONFIG.lightning.baseInterval; const base = rand(l,hv); nextLightningDelay = base * (1 - 0.5*intensity); lastLightningAttempt = performance.now(); }
+      function tryLightning(ts){ if (ts - lastLightningAttempt < nextLightningDelay) return; if (Math.random() < 0.22 * intensity) { // chance to be major
+          const major = Math.random() < 0.28*intensity; if (Math.random() < CONFIG.lightning.burstChance*intensity){ const burst = 2 + Math.floor(rand(1,4)*intensity); for (let i=0;i<burst;i++) setTimeout(()=>createLightningStrike(Math.random()<0.5||major), rand(i*40, i*180+60)); } else createLightningStrike(major); }
+        scheduleNextLightning(); }
+
+      function drawBolts(dt){ if (!lightningBolts.length) return; ctx.save(); ctx.globalCompositeOperation='lighter'; for (let i=lightningBolts.length-1;i>=0;i--){ const bolt = lightningBolts[i]; bolt.life -= dt; const lf = Math.max(0, bolt.life/0.3); const alpha = Math.pow(lf,0.6);
+            ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle = CONFIG.lightning.outerGlow; ctx.lineWidth = (bolt.thickness*8)*(0.6+lf*0.6); ctx.shadowBlur=22; ctx.shadowColor=CONFIG.lightning.outerGlow; drawBoltPath(bolt.segments, alpha*0.18);
+            ctx.strokeStyle = CONFIG.lightning.midGlow; ctx.lineWidth = (bolt.thickness*4)*(0.6+lf*0.4); ctx.shadowBlur=12; ctx.shadowColor=CONFIG.lightning.midGlow; drawBoltPath(bolt.segments, alpha*0.26);
+            ctx.strokeStyle = CONFIG.lightning.innerGlow; ctx.lineWidth = Math.max(1.2, bolt.thickness*2)*(0.8+lf*0.4); ctx.shadowBlur=8; ctx.shadowColor=CONFIG.lightning.innerGlow; drawBoltPath(bolt.segments, alpha*0.34);
+            ctx.strokeStyle = CONFIG.lightning.coreColor; ctx.lineWidth = Math.max(0.8, bolt.thickness*0.8); ctx.shadowBlur=0; drawBoltPath(bolt.segments, alpha*0.95);
+            if (bolt.life<=0) lightningBolts.splice(i,1);
+      } ctx.restore(); }
+      function drawBoltPath(pts,alpha){ if(!pts||pts.length<2) return; ctx.globalAlpha = alpha; ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i=1;i<pts.length;i++){ ctx.lineTo(pts[i].x, pts[i].y); } ctx.stroke(); }
+
+      // Camera shake: apply to glass container
+      let shakeTimer = 0;
+      function doCameraShake(strength=8, duration=400){ if (!glass) return; shakeTimer = duration; const start = performance.now(); glass.classList.add('shake'); const iv = setInterval(()=>{
+          const t = performance.now() - start; if (t >= duration){ clearInterval(iv); glass.classList.remove('shake'); }
+          const pct = 1 - (t/duration); const x = (Math.random()*2-1)*strength*pct; const y = (Math.random()*2-1)*(strength*0.4)*pct; const r = (Math.random()*2-1)*0.6*pct; glass.style.transform = `translate(${x}px, ${-Math.abs(y)}px) rotate(${r}deg)`;
+        }, 16);
+      }
+
+      function drawFlash(alpha){ if (alpha <= 0.003) return; ctx.save(); ctx.globalCompositeOperation='lighter'; const cx = w * rand(0.28,0.72); const cy = h * rand(0.08,0.52); const r = Math.max(w,h) * 0.9; const g = ctx.createRadialGradient(cx,cy,20,cx,cy,r); g.addColorStop(0, `rgba(255,255,255,${0.85*alpha})`); g.addColorStop(0.12, `rgba(233,213,255,${0.42*alpha})`); g.addColorStop(0.22, `rgba(192,132,252,${0.28*alpha})`); g.addColorStop(1, `rgba(0,0,0,0)`); ctx.fillStyle = g; ctx.fillRect(0,0,w,h); ctx.restore(); }
+
+      // Main update/draw loop
+      function loop(ts){ if (!running) return; const dt = Math.min(0.06, Math.max(0.0001, (ts - lastTs)/1000 || (1/60))); if (document.hidden){ lastTs = ts; rafId = requestAnimationFrame(loop); return; }
+        updateRain(dt); updateSplashes(dt); tryLightning(ts); flash.alpha = Math.max(0, flash.alpha - dt * 1.8);
+        // clear
+        ctx.clearRect(0,0,w,h);
+        drawRain(); drawSplashes(); drawBolts(dt);
+        if (flash.alpha>0.003) drawFlash(flash.alpha);
+        lastTs = ts; rafId = requestAnimationFrame(loop);
+      }
+
+      // Public controls
+      function start(){ if (running) return; running=true; lastTs = performance.now(); rafId = requestAnimationFrame(loop); }
+      function stop(){ running=false; if (rafId) cancelAnimationFrame(rafId); rafId=null; lightningBolts.length=0; rainLayers.length=0; splashes.length=0; ctx && ctx.clearRect(0,0,w,h); }
+      function pause(){ stop(); }
+      function resume(){ start(); }
+      function setIntensity(v){ intensity = Math.max(0, Math.min(1.6, v)); buildPools(); }
+
+      // init
+      function init(){ if (!canvas) return; canvas.style.pointerEvents='none'; window.addEventListener('resize', resize, {passive:true}); document.addEventListener('visibilitychange', ()=>{ if (document.hidden) pause(); else resume(); }); resize(); scheduleNextLightning(); }
+
+      // schedule first lightning
+      function scheduleNextLightning(){ const [l,hv]=CONFIG.lightning.baseInterval; const base = rand(l,hv); nextLightningDelay = base * (1 - 0.5*intensity); lastLightningAttempt = performance.now(); }
+
+      // Expose global
+      window.StormEngine = { init, start, stop, pause, resume, setIntensity };
+
+      // Auto-init
+      init();
+
+    })();
+
+    // Wire start to splash click (replace old startSnow behavior)
+    splash.addEventListener('click', ()=>{
+      splash.classList.add('hidden');
+      try{ video.muted=false; video.play().catch(()=>{}); }catch(e){}
+      staggerAppear();
+      // initialize audio context on user gesture
+      try{ if(typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') { const ac = new (window.AudioContext||window.webkitAudioContext)(); ac.close(); } }catch(e){}
+      // Start storm and set intensity
+      StormStartHelper();
+    }, {passive:true});
+
+    // Helper to start storm (handles offscreen option in future) and hook into StormEngine
+    function StormStartHelper(){
+      try{ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); }catch(e){ console.warn('Storm failed to start:', e); }
     }
-
-    // Snow system (pixel flakes) - non-interactive
-    let snowRunning = false;
-    const flakes = [];
-
-    function createFlake(){
-      const el = document.createElement('div'); el.className = 'flake';
-      const size = Math.round(rand(14,46)); el.style.width = size + 'px'; el.style.height = size + 'px';
-      const startX = Math.round(rand(6, window.innerWidth - size - 6)); el.style.left = startX + 'px';
-      const dx = Math.round(rand(-window.innerWidth*0.06, window.innerWidth*0.06));
-      const rot = Math.round(rand(-720,720)) + 'deg';
-      el.style.setProperty('--dx', dx + 'px'); el.style.setProperty('--rot', rot);
-      const duration = (rand(6.6,15)).toFixed(2) + 's';
-      el.style.animation = 'snowFall '+duration+' linear forwards';
-      el.style.animationDelay = (rand(0,2.2)).toFixed(2) + 's';
-      // insert SVG
-      el.innerHTML = pixelSnowSVG();
-      snowContainer.appendChild(el);
-      flakes.push(el);
-      // cleanup when animation ends
-      el.addEventListener('animationend', ()=>{ if(el.parentElement) el.parentElement.removeChild(el); const idx = flakes.indexOf(el); if(idx>=0) flakes.splice(idx,1); });
-      // cap
-      if(flakes.length>120){ const rem = flakes.shift(); if(rem && rem.parentElement) rem.parentElement.removeChild(rem); }
-    }
-
-    let snowSpawner = null;
-    function startSnow(){
-      if(snowRunning) return; snowRunning = true; staggerAppear();
-      snowSpawner = setInterval(()=>{ createFlake(); }, (window.innerWidth<600)?220:110);
-      for(let i=0;i<10;i++) setTimeout(createFlake, i*140);
-    }
-
-    // Splash click restores original behaviour: overlay blocks until click
-    splash.addEventListener('click', ()=>{ splash.classList.add('hidden'); try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} startSnow(); });
 
     // Extra: unmute on any interaction as convenience
     document.addEventListener('click', function unmuteOnce(){ try{ video.muted=false; video.play().catch(()=>{}); }catch(e){} document.removeEventListener('click', unmuteOnce); }, {passive:true});
@@ -183,10 +352,7 @@
       btn.addEventListener('mouseleave', ()=>btn.classList.remove('touch-press'));
     });
 
-    // Resize safety
-    window.addEventListener('resize', ()=>{});
-
-    // Accessibility: allow Enter key to enter
+    // Accessibility: allow Enter key to enter (start storm)
     document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !splash.classList.contains('hidden')){ splash.click(); } });
 
   </script>
