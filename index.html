@@ -372,6 +372,20 @@
     // Accessibility: Enter to remove overlay
     document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !splash.classList.contains('overlay-hidden')){ splash.click(); } });
 
+    // Auto-enter fallback: if user hasn't interacted after a short delay, auto-hide splash and force UI visible
+    setTimeout(()=>{
+      try{
+        if(splash && !splash.classList.contains('overlay-hidden')){
+          splash.classList.add('overlay-hidden');
+          setTimeout(()=>{ splash.style.display='none'; },520);
+          try{ startSiteAnimations(); }catch(e){}
+          document.body.classList.add('site-started');
+          const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row');
+          toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; });
+        }
+      }catch(e){}
+    }, 900);
+
   </script>
 </body>
 </html>
