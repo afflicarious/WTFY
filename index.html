@@ -25,12 +25,12 @@
     #splashScreen.overlay-hidden{opacity:0;pointer-events:none}
 
     /* Glass panel (card) with soft white glow */
-    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px;min-width:280px;max-width:920px;text-align:center}
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:24px;padding:28px;width:min(760px,92vw);box-shadow:0 6px 30px rgba(0,0,0,0.6)}
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
     /* Avatar with coin flip animation */
     .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08);transform-origin:center;backface-visibility:hidden}
-    @keyframes coinFlip { 0%{transform:perspective(600px) rotateX(80deg) scale(0.6)} 40%{transform:perspective(600px) rotateX(-16deg) scale(1.05)} 70%{transform:perspective(600px) rotateX(6deg) scale(.98)} 100%{transform:perspective(600px) rotateX(0) scale(1)} }
+    @keyframes coinFlip { 0%{transform:perspective(600px) rotateX(80deg) scale(0.6)} 40%{transform:perspective(600px) rotateX(-16deg) scale(1.05)} 70%{transform:perspective(600px) rotateX(6deg) scale(0.98)} 100%{transform:perspective(600px) rotateX(0deg) scale(1)} }
 
     .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;display:inline-block}
     .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;display:inline-block}
@@ -44,7 +44,7 @@
     @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
 
     /* Buttons: soft background, inner glow on press */
-    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.94);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.45);transition:transform .16s ease,box-shadow .12s ease}
+    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:#fff;text-decoration:none;font-weight:600}
     .link-btn:active, .link-btn.active{box-shadow:0 8px 30px rgba(255,255,255,0.12), inset 0 0 18px rgba(255,255,255,0.06);transform:translateY(2px) scale(0.996)}
 
     /* Magnetic target style (will be transformed via JS) */
@@ -90,9 +90,9 @@
     let audioCtx = null; let audioUnlocked = false;
     function ensureAudioContext(){ if (!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } } }
     function unlockAudioOnGesture(){ if(audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; // create a tiny click sound to unlock
-      try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(0); o.stop(audioCtx.currentTime + 0.02); audioUnlocked = true; }catch(e){} }
+      try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(); o.stop(audioCtx.currentTime + 0.02); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); audioUnlocked = true; }catch(e){} }
     // synthesized pop
-    function playPopSound(){ if(!audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.value = 0.0001; const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.value = 800 + Math.random()*600; o.connect(g); g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.08, now + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); o.start(now); o.stop(now + 0.14); }
+    function playPopSound(){ if(!audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.001, now); const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(600, now); o.connect(g); o.start(now); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); o.stop(now + 0.14); }
 
     // If a repository-level AudioManager exists, init it too on gesture
     function tryInitGlobalAudio(){ if(window.AudioManager && typeof window.AudioManager.init === 'function') try{ window.AudioManager.init(); }catch(e){} }
@@ -112,7 +112,7 @@
     function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(8, 40); const x = rand(r, bW - r); const y = bH + r + rand(0, 60); const vy = -rand(30, 140); const vx = rand(-12,12); const alpha = rand(0.12,0.32); bubbles.push({x,y,r,vy,vx,alpha,age:0}); }
     function popBubble(b){ const count = Math.round(clamp(b.r/6,4,12)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(40,220); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.28+Math.random()*0.36, r:rand(1.5,4.0), age:0}); } playPopSound(); }
     function updateBubbles(dt){ if(Math.random() < 0.08) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.r < -40){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
-    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0,'rgba(255,255,255,'+(p.alpha*1.0)+')'); grd.addColorStop(0.6,'rgba(255,255,255,'+(p.alpha*0.45)+')'); grd.addColorStop(1,'rgba(255,255,255,0.02)'); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x,p.y,p.r,0,Math.PI*2); bCtx.fill(); bCtx.restore(); } for(const sp of bubbleParticles){ bCtx.save(); bCtx.globalAlpha = Math.max(0,1 - (sp.age/sp.life)); bCtx.fillStyle = 'rgba(255,255,255,0.95)'; bCtx.beginPath(); bCtx.arc(sp.x,sp.y,sp.r,0,Math.PI*2); bCtx.fill(); bCtx.restore(); } }
+    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0, `rgba(255,255,255,${p.alpha})`); grd.addColorStop(0.6, `rgba(255,255,255,${p.alpha*0.6})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.9)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
 
     // pointer handling for popping bubbles
     function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx=b.x-x; const dy=b.y-y; if(Math.sqrt(dx*dx+dy*dy) <= b.r){ popBubble(b); bubbles.splice(i,1); break; } } }
@@ -121,7 +121,22 @@
     const magneticEls = Array.from(document.querySelectorAll('.magnetic'));
     const pointer = {x: window.innerWidth/2, y: window.innerHeight/2}; let magneticRAF = null;
     function onPointerMove(e){ pointer.x = e.clientX; pointer.y = e.clientY; if(!magneticRAF) magneticRAF = requestAnimationFrame(updateMagnetic); }
-    function updateMagnetic(){ magneticRAF = null; for(const el of magneticEls){ const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.sqrt(dx*dx + dy*dy); const max = Math.max(0, Math.min(1, (200 - dist) / 200)); const tx = (dx/dist) * max * 12 || 0; const ty = (dy/dist) * max * 6 || 0; el.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${1 + max*0.02})`; el.style.boxShadow = max>0? '0 18px 40px rgba(0,0,0,0.45)':''); } }
+    function updateMagnetic(){
+      magneticRAF = null;
+      for (const el of magneticEls) {
+        const r = el.getBoundingClientRect();
+        const cx = r.left + r.width/2;
+        const cy = r.top + r.height/2;
+        const dx = pointer.x - cx;
+        const dy = pointer.y - cy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const max = Math.max(0, Math.min(1, (200 - dist) / 200));
+        const tx = (dx/dist) * max * 12 || 0;
+        const ty = (dy/dist) * max * 6 || 0;
+        el.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${1 + max*0.02})`;
+        el.style.boxShadow = max > 0 ? '0 18px 40px rgba(0,0,0,0.45)' : '';
+      }
+    }
     function onPointerLeave(){ if(magneticRAF){ cancelAnimationFrame(magneticRAF); magneticRAF = null; } magneticEls.forEach(el=>{ el.style.transform=''; el.style.boxShadow=''; }); }
 
     // Page animations
