@@ -28,17 +28,19 @@
     .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:24px;padding:28px;width:min(760px,92vw);box-shadow:0 6px 30px rgba(0,0,0,0.6);transition:transform 520ms cubic-bezier(.2,.9,.25,1),opacity 420ms ease}
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
-    /* Avatar with coin flip animation */
-    .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08);transform-origin:center;backface-visibility:hidden}
-    @keyframes coinFlip { 0%{transform:perspective(700px) rotateY(0deg) scale(0.88)} 50%{transform:perspective(700px) rotateY(180deg) scale(1.06)} 100%{transform:perspective(700px) rotateY(360deg) scale(1)} }
+    /* Avatar with coin flip animation (coin toss handled in JS) */
+    .profile-row{display:flex;align-items:center;gap:14px;justify-content:center}
+    .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0;border:2px solid rgba(255,255,255,0.08);transform-origin:center;backface-visibility:hidden}
 
-    .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;display:inline-block}
-    .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;display:inline-block}
+    .name{color:#fff;font-size:26px;letter-spacing:0.12em;text-transform:uppercase;margin:0;opacity:0}
+    .name .spider{margin-left:8px;opacity:0.95}
+    .bio{color:rgba(255,255,255,0.92);margin:6px 0 16px;opacity:0}
 
-    /* animated entrance - will stagger via inline style delays */
-    @keyframes appearDown {from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    /* fall-in helper for drop animations */
+    .fall { opacity:0; transform: translateY(-80px) scale(0.99); }
+    .fall.in { opacity:1; transform: none; transition: transform 720ms cubic-bezier(.2,.9,.25,1), opacity 520ms ease; }
 
-    /* Links grid: 4 columns (2 rows on desktop) */
+    /* Links grid entrance */
     .links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;opacity:0;transform:translateY(8px) scale(0.998);transition:opacity 540ms cubic-bezier(.2,.9,.25,1),transform 540ms cubic-bezier(.2,.9,.25,1)}
     .site-started .links-grid{opacity:1;transform:none}
     .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:#fff;text-decoration:none;font-weight:600;transition:transform 360ms cubic-bezier(.2,.9,.25,1),box-shadow 360ms}
@@ -57,11 +59,13 @@
     @media (max-width: 420px) {
       .glass-container { width: min(360px,92vw); padding: 14px; border-radius:18px; }
       .profile-image { width:72px; height:72px; }
-      .name { font-size:18px; letter-spacing:4px; }
+      .name { font-size:18px; letter-spacing:0.08em; }
       .bio { font-size:13px; }
       .link-btn { padding:8px 10px; font-size:14px; }
     }
 
+    /* subtle per-character pop used by JS */
+    .char-pop{display:inline-block;transform:translateY(-6px);opacity:0}
   </style>
 </head>
 <body>
@@ -76,10 +80,14 @@
 
   <div id="splashScreen"><div class="overlay-text">Click to enter...</div></div>
 
-  <div class="glass-container" id="glassContainer">
-    <img src="pfp.jpg" alt="Profile" class="profile-image" id="pfp">
-    <h1 class="name" id="nameEl"></h1>
-    <p class="bio" id="bioEl"></p>
+  <div class="glass-container fall" id="glassContainer">
+    <div class="profile-row">
+      <img src="pfp.jpg" alt="Profile" class="profile-image" id="pfp">
+      <div>
+        <h1 class="name" id="nameEl"></h1>
+        <p class="bio" id="bioEl"></p>
+      </div>
+    </div>
 
     <div class="links-grid" id="linksGrid">
       <a class="link-btn magnetic" href="#">Affly Intel</a>
@@ -104,22 +112,17 @@
     // --- Audio: Pop synth for bubbles + integration with AudioManager if present ---
     let audioCtx = null; let audioUnlocked = false;
     function ensureAudioContext(){ if (!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } } }
-    function unlockAudioOnGesture(){ if(audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; // create a tiny click sound to unlock
-      try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(); o.stop(audioCtx.currentTime + 0.02); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); audioUnlocked = true; }catch(e){} }
-    // synthesized pop
+    function unlockAudioOnGesture(){ if(audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(); o.stop(audioCtx.currentTime + 0.02); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); audioUnlocked = true; }catch(e){} }
     function playPopSound(){ if(!audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.001, now); const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(600, now); o.connect(g); o.start(now); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); o.stop(now + 0.14); }
-
-    // If a repository-level AudioManager exists, init it too on gesture
     function tryInitGlobalAudio(){ if(window.AudioManager && typeof window.AudioManager.init === 'function') try{ window.AudioManager.init(); }catch(e){} }
 
-    // --- Bubbles (more animated + lively) ---
+    // --- Bubbles (tuned to float upwards with richer color and liveliness) ---
     const bubbleCanvas = document.getElementById('bubbleCanvas');
     const bCtx = bubbleCanvas.getContext('2d');
     let bW = 0, bH = 0, bDPR = 1;
     const bubbles = [];
     const bubbleParticles = [];
-    // reduce max bubbles on touch for performance and clarity
-    let MAX_BUBBLES = isTouch ? 80 : 220;
+    let MAX_BUBBLES = isTouch ? 80 : 240;
 
     function resizeBubbleCanvas(){
       bDPR = isTouch ? 1 : Math.min(window.devicePixelRatio || 1, 2);
@@ -130,65 +133,70 @@
       bubbleCanvas.style.height = bH+'px';
       bCtx.setTransform(bDPR,0,0,bDPR,0,0);
       if (typeof bCtx.imageSmoothingEnabled !== 'undefined') bCtx.imageSmoothingEnabled = true;
-      const initial = Math.floor(MAX_BUBBLES * (isTouch ? 0.45 : 0.35));
+      const initial = Math.floor(MAX_BUBBLES * (isTouch ? 0.45 : 0.3));
       while(bubbles.length < initial){ createBubble(); }
     }
 
     function createBubble(){
       if(bubbles.length >= MAX_BUBBLES) return;
-      const r = rand(isTouch ? 6 : 8, isTouch ? 30 : 44);
-      const baseX = rand(r, bW - r);
-      const x = baseX;
-      const y = bH + r + rand(0, 80);
-      const vy = -rand(isTouch ? 18 : 30, isTouch ? 80 : 160);
-      const vx = rand(-8,8);
-      const alpha = isTouch ? rand(0.22,0.54) : rand(0.12,0.32);
-      const hue = (200 + Math.random()*60) % 360; // slight blue-ish tint
-      // wobble for lively motion
-      const wobbleAmp = rand(8, 28) * (r/30);
-      const wobbleFreq = rand(0.7, 1.8);
-      bubbles.push({x, baseX, y, r, vy, vx, alpha, age:0, hue, wobble: Math.random()*Math.PI*2, wobbleAmp, wobbleFreq});
+      const r = rand(isTouch ? 6 : 8, isTouch ? 28 : 52);
+      const x = rand(r, bW - r);
+      const y = bH + r + rand(0, 140); // start further down so they float up into view
+      const vy = -rand(isTouch ? 20 : 40, isTouch ? 80 : 180); // upward velocity
+      const vx = rand(-16,16);
+      const alpha = isTouch ? rand(0.3,0.7) : rand(0.2,0.5);
+      const hue = (190 + Math.random()*120) % 360; // richer range
+      const wobbleAmp = rand(6, 36) * (r/36);
+      const wobbleFreq = rand(0.4, 1.6);
+      const pulse = {amp: rand(0.02,0.08), freq: rand(0.6,1.6)};
+      bubbles.push({x, y, baseX: x, r, vy, vx, alpha, age:0, hue, wobble: Math.random()*Math.PI*2, wobbleAmp, wobbleFreq, pulse});
     }
 
     function popBubble(b){ const count = Math.round(clamp(b.r/6, isTouch ? 3 : 4, isTouch ? 10 : 14)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(30,220); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.22+Math.random()*0.36, r:rand(1.2,4.0), age:0, hue:b.hue}); } playPopSound(); }
 
     function updateBubbles(dt){
-      // higher spawn chance slightly on touch keeps it lively
-      if(Math.random() < (isTouch ? 0.14 : 0.08)) createBubble();
+      if(Math.random() < (isTouch ? 0.16 : 0.06)) createBubble();
       for(let i=bubbles.length-1;i>=0;i--){
         const p=bubbles[i];
         p.age += dt;
-        // wobble update
         p.wobble += dt * p.wobbleFreq * 2 * Math.PI;
-        p.x = p.baseX + Math.sin(p.wobble) * p.wobbleAmp + p.vx * p.age * 0.02;
-        p.y += p.vy * dt;
-        if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; }
-        if(p.y + p.r < -60){ bubbles.splice(i,1); continue; }
+        // gentle horizontal wobble + slow drift
+        p.x = p.baseX + Math.sin(p.wobble) * p.wobbleAmp + p.vx * p.age * 0.01;
+        // vertical movement - they float up but also bob slightly with sine for life
+        p.y += p.vy * dt + Math.sin(p.age * 2.0) * (p.r*0.002);
+        // pulse (size change) for liveliness
+        p.currentR = p.r * (1 + Math.sin(p.age * p.pulse.freq * Math.PI * 2) * p.pulse.amp);
+        if(p.x - p.currentR <= 0 || p.x + p.currentR >= bW || p.y - p.currentR <= 0){ popBubble(p); bubbles.splice(i,1); continue; }
+        if(p.y + p.currentR < -120){ bubbles.splice(i,1); continue; }
       }
       for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); }
     }
 
-    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH);
+    function drawBubbles(){
+      bCtx.clearRect(0,0,bW,bH);
+      // additive blending for more vibrant look
+      bCtx.globalCompositeOperation = 'lighter';
       for(const p of bubbles){ bCtx.save();
-        // glow for desktop
-        if(!isTouch){ bCtx.shadowBlur = Math.max(8, p.r * 0.8); bCtx.shadowColor = `hsla(${p.hue}, 90%, 60%, ${p.alpha*0.9})`; }
-        const inner = p.r * (isTouch ? 0.08 : 0.12);
-        const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, inner, p.x, p.y, p.r);
+        const r = p.currentR || p.r;
+        // stronger glow on desktop
+        if(!isTouch){ bCtx.shadowBlur = Math.max(10, r * 1.1); bCtx.shadowColor = `hsla(${p.hue}, 95%, 60%, ${p.alpha*0.9})`; }
+        const inner = r * (isTouch ? 0.08 : 0.12);
+        const grd = bCtx.createRadialGradient(p.x - r*0.25, p.y - r*0.35, inner, p.x, p.y, r);
         grd.addColorStop(0, `hsla(${p.hue}, 95%, 92%, ${p.alpha})`);
-        grd.addColorStop(0.6, `hsla(${p.hue}, 90%, 78%, ${p.alpha*0.65})`);
+        grd.addColorStop(0.5, `hsla(${p.hue}, 95%, 78%, ${p.alpha*0.75})`);
         grd.addColorStop(1, `rgba(255,255,255,0)`);
         bCtx.fillStyle = grd;
-        bCtx.beginPath(); bCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); bCtx.fill();
-        // subtle stroke ring
-        bCtx.lineWidth = Math.max(0.4, p.r * (isTouch ? 0.03 : 0.02));
+        bCtx.beginPath(); bCtx.arc(p.x, p.y, r, 0, Math.PI*2); bCtx.fill();
+        bCtx.lineWidth = Math.max(0.4, r * (isTouch ? 0.03 : 0.02));
         bCtx.strokeStyle = `rgba(255,255,255,${isTouch?0.08:0.06})`;
         bCtx.stroke();
         bCtx.restore(); }
+      bCtx.globalCompositeOperation = 'source-over';
       for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); }
     }
 
     // pointer handling for popping bubbles
-    function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx=b.x-x; const dy=b.y-y; if(Math.sqrt(dx*dx+dy*dy) <= b.r){ popBubble(b); bubbles.splice(i,1); break; } } }
+    function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx=b.x-x; const dy=b.y-y; if(Math.sqrt(dx*dx+dy*dy) <= (b.currentR||b.r)){ popBubble(b); bubbles.splice(i,1); break; } } }
 
     // Magnetic buttons: only enable on non-touch / fine pointer devices
     const magneticEls = !isTouch ? Array.from(document.querySelectorAll('.magnetic')) : [];
@@ -197,46 +205,86 @@
     function updateMagnetic(){ magneticRAF = null; for (const el of magneticEls) { const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.sqrt(dx*dx + dy*dy) || 1; const max = Math.max(0, Math.min(1, (200 - dist) / 200)); const tx = (dx/dist) * max * 14 || 0; const ty = (dy/dist) * max * 8 || 0; el.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${1 + max*0.03})`; el.style.boxShadow = max > 0 ? '0 18px 40px rgba(0,0,0,0.45)' : ''; } }
     function onPointerLeave(){ if(magneticRAF){ cancelAnimationFrame(magneticRAF); magneticRAF = null; } magneticEls.forEach(el=>{ el.style.transform=''; el.style.boxShadow=''; }); }
 
-    // Page animations: name + bio + avatar flip
-    const nameText = 'AFFLY \u{1F577}'; // AFFLY with spider emoji (🕷)
+    // Page animations: coin toss, typewriter, and fall-in orchestration
+    const nameText = 'AFFLY \u{1F577}'; // AFFLY 🕷
     const bioText = 'Trying to survive another boring day.....';
 
-    function animateAvatar(){ const img = document.getElementById('pfp'); img.style.animation = 'coinFlip 900ms cubic-bezier(.2,.9,.25,1)'; img.addEventListener('animationend', ()=>{ img.style.animation = ''; }); }
+    function animateAvatarToss(){
+      const img = document.getElementById('pfp');
+      // use Web Animations API for a toss: up, flip, land with settle
+      const up = -220 - Math.min(window.innerHeight*0.12, 120);
+      const flips = 4; // number of flips while in air
+      const keyframes = [
+        { transform: 'translateY(0px) rotateX(0deg) rotateZ(0deg)', offset:0 },
+        { transform: `translateY(${up}px) rotateX(${360*flips}deg) rotateZ(10deg)`, offset:0.5, easing:'cubic-bezier(.2,.9,.25,1)' },
+        { transform: `translateY(18px) rotateX(${360*(flips+1)}deg) rotateZ(-6deg)`, offset:0.82, easing:'cubic-bezier(.3,.8,0.2,1)' },
+        { transform: 'translateY(0px) rotateX(360*(flips+1)deg) rotateZ(0deg)', offset:1, easing:'cubic-bezier(.3,.8,0.2,1)' }
+      ];
+      const anim = img.animate(keyframes, { duration: 1200, iterations:1, fill:'forwards' });
+      return anim.finished.catch(()=>{});
+    }
 
-    async function typeWriter(el, text, speed=48){ el.textContent = ''; for(let i=0;i<text.length;i++){ el.textContent += text[i]; await new Promise(r=>setTimeout(r, speed + Math.random()*12)); } }
+    function perCharType(el, text, speed=40){
+      el.innerHTML = '';
+      return new Promise(async (res)=>{
+        for(let i=0;i<text.length;i++){
+          const ch = document.createElement('span'); ch.className='char-pop'; ch.textContent = text[i];
+          ch.style.transition = 'transform 360ms cubic-bezier(.2,.9,.25,1), opacity 360ms ease';
+          el.appendChild(ch);
+          // tiny staggered reveal
+          requestAnimationFrame(()=>{ ch.style.transform='translateY(0)'; ch.style.opacity='1'; });
+          await new Promise(r=>setTimeout(r, speed + Math.random()*18));
+        }
+        res();
+      });
+    }
 
-    function animateEntrance(){ const card = document.getElementById('glassContainer'); card.style.opacity = 0; card.style.transform = 'translateY(-12px) scale(0.996)'; requestAnimationFrame(()=>{ card.style.transition = 'opacity 520ms ease, transform 520ms cubic-bezier(.2,.9,.25,1)'; card.style.opacity = 1; card.style.transform = 'translateY(0) scale(1)'; // after a short delay, reveal links with class
-        setTimeout(()=>{ document.body.classList.add('site-started'); }, 120); }); }
+    async function startSiteAnimations(){
+      // orchestrate the toss and fall-in
+      const container = document.getElementById('glassContainer');
+      // mark initial state
+      container.classList.remove('fall');
+      // animate avatar toss
+      const avatarPromise = animateAvatarToss();
+      // stagger reveal: name and bio fall in after a short delay
+      const nameEl = document.getElementById('nameEl'); const bioEl = document.getElementById('bioEl');
+      // apply fall-in class (will transition in)
+      setTimeout(()=>{ container.classList.add('fall'); container.classList.add('in'); }, 10);
 
-    // Start site animations wrapper
-    function startSiteAnimations(){ animateAvatar(); animateEntrance(); (async ()=>{ const nameEl = document.getElementById('nameEl'); const bioEl = document.getElementById('bioEl'); // typewriter with slight delay & per-char pulse
-        await typeWriter(nameEl, nameText, 60);
-        nameEl.style.opacity = 1; nameEl.style.transform = 'translateY(0)';
-        await new Promise(r=>setTimeout(r,200));
-        await typeWriter(bioEl, bioText, 28);
-        bioEl.style.opacity = 1; bioEl.style.transform = 'translateY(0)';
-      })(); try{ if(window.StormEngine && typeof window.StormEngine.start === 'function'){ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); } }catch(e){} }
+      // But we'll animate children with staggered fall-ins
+      const children = [document.querySelector('.profile-row'), nameEl, bioEl, document.getElementById('linksGrid')];
+      let delay = 80;
+      for(const ch of children){ if(!ch) continue; ch.classList.add('fall'); setTimeout(()=>ch.classList.add('in'), delay); delay += 120; }
+
+      // wait a little then type name and bio while avatar is tossing
+      await new Promise(r=>setTimeout(r, 360));
+      await perCharType(nameEl, nameText, 52);
+      await new Promise(r=>setTimeout(r, 180));
+      await perCharType(bioEl, bioText, 26);
+
+      // mark site started for other CSS transitions like links
+      document.body.classList.add('site-started');
+
+      // ensure avatar settling finished
+      await avatarPromise;
+    }
 
     // Main loop for bubbles
     let lastFrame = performance.now(); function frame(now){ const dt = Math.min(0.045, (now - lastFrame)/1000); updateBubbles(dt); drawBubbles(); lastFrame = now; requestAnimationFrame(frame); }
 
-    // Overlay click handler - improved for mobile autoplay and audio unlock
+    // Overlay click handler
     const splash = document.getElementById('splashScreen');
     const video = document.getElementById('bgVideo');
 
     splash.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      // 1. Resume / Unlock Web Audio contexts
-      try{ if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume(); }catch(e){ /* ignore */ }
+      try{ if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume(); }catch(e){}
       try{ if (window.AudioManager && window.AudioManager._ctx && window.AudioManager._ctx.state === 'suspended') { await window.AudioManager._ctx.resume(); } }catch(e){}
-      // 2. Unmute the video (was intentionally muted in markup previously) and play background video (handle promise)
       if(video){ try{ video.muted = false; video.volume = 1.0; await video.play(); }catch(err){ console.warn('Video play failed:', err); } }
-      // 3. Hide overlay with fade & pointer-events off
       splash.classList.add('overlay-hidden');
       setTimeout(()=>{ splash.style.display = 'none'; }, 520);
-      // 4. Start site animations
+      // start all animations
       startSiteAnimations();
-      // ensure audio unlocked globally
       unlockAudioOnGesture(); tryInitGlobalAudio();
     }, {passive:false});
 
@@ -248,15 +296,14 @@
     }
     window.addEventListener('resize', ()=>{ resizeBubbleCanvas(); }, {passive:true});
 
-    // Button feedback: ensure mobile gets active state (adds/removes .active class on pointer events)
+    // Button feedback
     const linkButtons = Array.from(document.querySelectorAll('.link-btn'));
-    linkButtons.forEach(el=>{
+    linkButtons.forEach((el,i)=>{
       el.addEventListener('pointerdown', ()=> el.classList.add('active'), {passive:true});
       el.addEventListener('pointerup', ()=> el.classList.remove('active'));
       el.addEventListener('pointercancel', ()=> el.classList.remove('active'));
       el.addEventListener('pointerleave', ()=> el.classList.remove('active'));
-      // add a tiny staggered entrance transform for extra sexiness
-      el.style.transitionDelay = (Math.random()*220)+'ms';
+      el.style.transitionDelay = (i*40)+'ms';
     });
 
     // Start loops
