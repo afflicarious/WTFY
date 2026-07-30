@@ -50,6 +50,15 @@
     /* Magnetic target style (will be transformed via JS) */
     .magnetic{will-change:transform}
 
+    /* Mobile adjustments: smaller panel & avatar for better fit */
+    @media (max-width: 420px) {
+      .glass-container { width: min(360px,92vw); padding: 14px; }
+      .profile-image { width:72px; height:72px; }
+      .name { font-size:18px; letter-spacing:4px; }
+      .bio { font-size:13px; }
+      .link-btn { padding:8px 10px; font-size:14px; }
+    }
+
   </style>
 </head>
 <body>
@@ -82,6 +91,9 @@
   </div>
 
   <script>
+    // detect touch / mobile-like input early
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || window.matchMedia('(pointer:coarse)').matches;
+
     // --- Small helpers ---
     function rand(min,max){return Math.random()*(max-min)+min}
     function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
@@ -103,22 +115,28 @@
     let bW = 0, bH = 0, bDPR = 1;
     const bubbles = [];
     const bubbleParticles = [];
-    const MAX_BUBBLES = 200; // increased
-    function resizeBubbleCanvas(){ bDPR = Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0);
+    // reduce max bubbles on touch for performance and clarity
+    let MAX_BUBBLES = isTouch ? 90 : 200;
+    function resizeBubbleCanvas(){ bDPR = isTouch ? 1 : Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0);
+      // imageSmoothing can help mobile crispness
+      if (typeof bCtx.imageSmoothingEnabled !== 'undefined') bCtx.imageSmoothingEnabled = true;
       // create an initial field of bubbles for visual density
-      const initial = Math.floor(MAX_BUBBLES * 0.35);
+      const initial = Math.floor(MAX_BUBBLES * (isTouch ? 0.4 : 0.35));
       while(bubbles.length < initial){ createBubble(); }
     }
-    function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(8, 40); const x = rand(r, bW - r); const y = bH + r + rand(0, 60); const vy = -rand(30, 140); const vx = rand(-12,12); const alpha = rand(0.12,0.32); bubbles.push({x,y,r,vy,vx,alpha,age:0}); }
-    function popBubble(b){ const count = Math.round(clamp(b.r/6,4,12)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(40,220); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.28+Math.random()*0.36, r:rand(1.5,4.0), age:0}); } playPopSound(); }
-    function updateBubbles(dt){ if(Math.random() < 0.08) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.r < -40){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
-    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0, `rgba(255,255,255,${p.alpha})`); grd.addColorStop(0.6, `rgba(255,255,255,${p.alpha*0.6})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.9)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
+    function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(isTouch ? 6 : 8, isTouch ? 28 : 40); const x = rand(r, bW - r); const y = bH + r + rand(0, 60); const vy = -rand(isTouch ? 20 : 30, isTouch ? 100 : 140); const vx = rand(-10,10); const alpha = isTouch ? rand(0.22,0.46) : rand(0.12,0.32); bubbles.push({x,y,r,vy,vx,alpha,age:0}); }
+    function popBubble(b){ const count = Math.round(clamp(b.r/6,3,10)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(30,180); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.22+Math.random()*0.36, r:rand(1.2,3.8), age:0}); } playPopSound(); }
+    function updateBubbles(dt){ if(Math.random() < (isTouch ? 0.12 : 0.08)) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.r < -40){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
+    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.08, p.x, p.y, p.r); grd.addColorStop(0, `rgba(255,255,255,${p.alpha})`); grd.addColorStop(0.6, `rgba(255,255,255,${p.alpha*0.6})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); bCtx.fill(); // subtle ring for crisper look on mobile
+      if (isTouch) { bCtx.lineWidth = Math.max(0.5, p.r * 0.03); bCtx.strokeStyle = `rgba(255,255,255,0.08)`; bCtx.stroke(); }
+      bCtx.restore(); }
+      for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
 
     // pointer handling for popping bubbles
     function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx=b.x-x; const dy=b.y-y; if(Math.sqrt(dx*dx+dy*dy) <= b.r){ popBubble(b); bubbles.splice(i,1); break; } } }
 
-    // Magnetic buttons
-    const magneticEls = Array.from(document.querySelectorAll('.magnetic'));
+    // Magnetic buttons: only enable on non-touch / fine pointer devices
+    const magneticEls = !isTouch ? Array.from(document.querySelectorAll('.magnetic')) : [];
     const pointer = {x: window.innerWidth/2, y: window.innerHeight/2}; let magneticRAF = null;
     function onPointerMove(e){ pointer.x = e.clientX; pointer.y = e.clientY; if(!magneticRAF) magneticRAF = requestAnimationFrame(updateMagnetic); }
     function updateMagnetic(){
@@ -175,8 +193,10 @@
 
     // pointer handlers
     window.addEventListener('pointerdown', handlePointerDown, {passive:true});
-    window.addEventListener('mousemove', onPointerMove, {passive:true});
-    window.addEventListener('mouseleave', onPointerLeave, {passive:true});
+    if (!isTouch) {
+      window.addEventListener('mousemove', onPointerMove, {passive:true});
+      window.addEventListener('mouseleave', onPointerLeave, {passive:true});
+    }
     window.addEventListener('resize', ()=>{ resizeBubbleCanvas(); }, {passive:true});
 
     // Button feedback: ensure mobile gets active state (adds/removes .active class on pointer events)
