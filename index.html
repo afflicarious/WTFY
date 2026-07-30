@@ -21,16 +21,16 @@
 
     /* Splash overlay - visible until user clicks */
     #splashScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1050;background:rgba(0,0,0,0.65);cursor:pointer;transition:opacity .5s ease}
-    #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))}
+    #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:22px;letter-spacing:.18em;padding:18px 28px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))}
     #splashScreen.overlay-hidden{opacity:0;pointer-events:none}
 
     /* Glass panel (card) with soft white glow */
-    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px 26px;max-width:760px;width:92%;text-align:center;transition:transform 220ms ease-out;box-shadow:0 8px 40px rgba(255,255,255,0.04), 0 2px 8px rgba(255,255,255,0.02);}
+    .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:22px;min-width:280px;max-width:920px;text-align:center}
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:24px;pointer-events:none;box-shadow:0 0 40px 6px rgba(138,43,226,0.08);filter:blur(6px);opacity:1}
 
     /* Avatar with coin flip animation */
     .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08);transform-origin:center;backface-visibility:hidden}
-    @keyframes coinFlip { 0%{transform:perspective(600px) rotateX(80deg) scale(0.6)} 40%{transform:perspective(600px) rotateX(-16deg) scale(1.05)} 70%{transform:perspective(600px) rotateX(6deg) scale(0.98)} 100%{transform:perspective(600px) rotateX(0deg) scale(1)} }
+    @keyframes coinFlip { 0%{transform:perspective(600px) rotateX(80deg) scale(0.6)} 40%{transform:perspective(600px) rotateX(-16deg) scale(1.05)} 70%{transform:perspective(600px) rotateX(6deg) scale(.98)} 100%{transform:perspective(600px) rotateX(0) scale(1)} }
 
     .name{color:#fff;font-size:24px;letter-spacing:6px;text-transform:uppercase;margin-bottom:6px;opacity:0;display:inline-block}
     .bio{color:rgba(255,255,255,0.9);margin-bottom:16px;opacity:0;display:inline-block}
@@ -44,19 +44,16 @@
     @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
 
     /* Buttons: soft background, inner glow on press */
-    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.95);text-decoration:none;transition:box-shadow 180ms ease, transform 180ms ease}
-    .link-btn:active, .link-btn.active{box-shadow:0 8px 30px rgba(255,255,255,0.12), inset 0 0 18px rgba(255,255,255,0.06)}
+    .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));color:rgba(255,255,255,0.94);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.45);transition:transform .16s ease,box-shadow .12s ease}
+    .link-btn:active, .link-btn.active{box-shadow:0 8px 30px rgba(255,255,255,0.12), inset 0 0 18px rgba(255,255,255,0.06);transform:translateY(2px) scale(0.996)}
 
     /* Magnetic target style (will be transformed via JS) */
     .magnetic{will-change:transform}
 
-    /* small enable-sound toggle */
-    #soundToggle{position:fixed;right:12px;bottom:12px;z-index:1200;background:rgba(255,255,255,0.03);color:#fff;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:10px;font-size:13px;cursor:pointer}
-
   </style>
 </head>
 <body>
-  <video id="bgVideo" playsinline webkit-playsinline muted autoplay loop preload="auto">
+  <video id="bgVideo" playsinline webkit-playsinline autoplay loop preload="auto">
     <source src="Cowboy.mp4" type="video/mp4">
   </video>
 
@@ -84,8 +81,6 @@
     </div>
   </div>
 
-  <button id="soundToggle" aria-pressed="false">Enable Sound</button>
-
   <script>
     // --- Small helpers ---
     function rand(min,max){return Math.random()*(max-min)+min}
@@ -95,47 +90,48 @@
     let audioCtx = null; let audioUnlocked = false;
     function ensureAudioContext(){ if (!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } } }
     function unlockAudioOnGesture(){ if(audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; // create a tiny click sound to unlock
-      try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(0); o.stop(0.02); audioUnlocked = true; }catch(e){ console.warn('Audio unlock failed', e); }
-    }
+      try{ const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination); const o = audioCtx.createOscillator(); o.type='square'; o.frequency.value = 300; o.connect(g); o.start(0); o.stop(audioCtx.currentTime + 0.02); audioUnlocked = true; }catch(e){} }
     // synthesized pop
-    function playPopSound(){ if(!audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.value = 0.0001; const b = audioCtx.createBiquadFilter(); b.type='highpass'; b.frequency.value=600; const noiseLen = 0.08; const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * noiseLen, audioCtx.sampleRate); const data = buffer.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/data.length*4); } const src = audioCtx.createBufferSource(); src.buffer = buffer; src.connect(b); b.connect(g); g.gain.setValueAtTime(0.001, now); g.gain.exponentialRampToValueAtTime(0.16, now + 0.008); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12); src.start(now); src.stop(now + noiseLen + 0.02); }
+    function playPopSound(){ if(!audioUnlocked) return; ensureAudioContext(); if(!audioCtx) return; const now = audioCtx.currentTime; const g = audioCtx.createGain(); g.connect(audioCtx.destination); g.gain.value = 0.0001; const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.value = 800 + Math.random()*600; o.connect(g); g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.08, now + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); o.start(now); o.stop(now + 0.14); }
 
     // If a repository-level AudioManager exists, init it too on gesture
     function tryInitGlobalAudio(){ if(window.AudioManager && typeof window.AudioManager.init === 'function') try{ window.AudioManager.init(); }catch(e){} }
 
-    // --- Bubbles (unchanged) ---
+    // --- Bubbles (tuned for more density) ---
     const bubbleCanvas = document.getElementById('bubbleCanvas');
     const bCtx = bubbleCanvas.getContext('2d');
     let bW = 0, bH = 0, bDPR = 1;
     const bubbles = [];
     const bubbleParticles = [];
-    const MAX_BUBBLES = 80;
-    function resizeBubbleCanvas(){ bDPR = Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0); }
+    const MAX_BUBBLES = 200; // increased
+    function resizeBubbleCanvas(){ bDPR = Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0);
+      // create an initial field of bubbles for visual density
+      const initial = Math.floor(MAX_BUBBLES * 0.35);
+      while(bubbles.length < initial){ createBubble(); }
+    }
     function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(8, 40); const x = rand(r, bW - r); const y = bH + r + rand(0, 60); const vy = -rand(30, 140); const vx = rand(-12,12); const alpha = rand(0.12,0.32); bubbles.push({x,y,r,vy,vx,alpha,age:0}); }
     function popBubble(b){ const count = Math.round(clamp(b.r/6,4,12)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(40,220); bubbleParticles.push({x:b.x,y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.28+Math.random()*0.36, r:rand(1.5,4.0), age:0}); } playPopSound(); }
-    function updateBubbles(dt){ if(Math.random() < 0.02) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.r < -40){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
-    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0, `rgba(255,255,255,${p.alpha*0.9})`); grd.addColorStop(0.4, `rgba(220,240,255,${p.alpha*0.24})`); grd.addColorStop(1, `rgba(140,190,230,${p.alpha*0.14})`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x,p.y,p.r,0,Math.PI*2); bCtx.fill(); bCtx.strokeStyle = `rgba(255,255,255,${p.alpha*0.45})`; bCtx.lineWidth = 1; bCtx.stroke(); bCtx.restore(); } for(const sp of bubbleParticles){ bCtx.save(); bCtx.globalAlpha = Math.max(0, 1 - (sp.age/sp.life)); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
+    function updateBubbles(dt){ if(Math.random() < 0.08) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.age += dt; if(p.x - p.r <= 0 || p.x + p.r >= bW || p.y - p.r <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.r < -40){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
+    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); for(const p of bubbles){ bCtx.save(); const grd = bCtx.createRadialGradient(p.x - p.r*0.25, p.y - p.r*0.35, p.r*0.1, p.x, p.y, p.r); grd.addColorStop(0,'rgba(255,255,255,'+(p.alpha*1.0)+')'); grd.addColorStop(0.6,'rgba(255,255,255,'+(p.alpha*0.45)+')'); grd.addColorStop(1,'rgba(255,255,255,0.02)'); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x,p.y,p.r,0,Math.PI*2); bCtx.fill(); bCtx.restore(); } for(const sp of bubbleParticles){ bCtx.save(); bCtx.globalAlpha = Math.max(0,1 - (sp.age/sp.life)); bCtx.fillStyle = 'rgba(255,255,255,0.95)'; bCtx.beginPath(); bCtx.arc(sp.x,sp.y,sp.r,0,Math.PI*2); bCtx.fill(); bCtx.restore(); } }
 
     // pointer handling for popping bubbles
-    function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= b.r*b.r){ popBubble(b); bubbles.splice(i,1); break; } } unlockAudioOnGesture(); tryInitGlobalAudio(); }
+    function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx=b.x-x; const dy=b.y-y; if(Math.sqrt(dx*dx+dy*dy) <= b.r){ popBubble(b); bubbles.splice(i,1); break; } } }
 
     // Magnetic buttons
     const magneticEls = Array.from(document.querySelectorAll('.magnetic'));
     const pointer = {x: window.innerWidth/2, y: window.innerHeight/2}; let magneticRAF = null;
     function onPointerMove(e){ pointer.x = e.clientX; pointer.y = e.clientY; if(!magneticRAF) magneticRAF = requestAnimationFrame(updateMagnetic); }
-    function updateMagnetic(){ magneticRAF = null; for(const el of magneticEls){ const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.hypot(dx,dy); const maxDist = Math.max(120, r.width*1.2); if(dist < maxDist){ const strength = (1 - (dist/maxDist)); const tx = clamp(dx * 0.18 * strength, -16, 16); const ty = clamp(dy * 0.12 * strength, -10, 10); el.style.transform = `translate(${tx}px, ${ty}px) scale(${1 + 0.02*strength})`; el.style.boxShadow = `0 ${6*strength}px ${18*strength}px rgba(168,144,255,${0.08 + 0.06*strength})`; } else { el.style.transform = ''; el.style.boxShadow = ''; } } }
+    function updateMagnetic(){ magneticRAF = null; for(const el of magneticEls){ const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.sqrt(dx*dx + dy*dy); const max = Math.max(0, Math.min(1, (200 - dist) / 200)); const tx = (dx/dist) * max * 12 || 0; const ty = (dy/dist) * max * 6 || 0; el.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${1 + max*0.02})`; el.style.boxShadow = max>0? '0 18px 40px rgba(0,0,0,0.45)':''); } }
     function onPointerLeave(){ if(magneticRAF){ cancelAnimationFrame(magneticRAF); magneticRAF = null; } magneticEls.forEach(el=>{ el.style.transform=''; el.style.boxShadow=''; }); }
 
     // Page animations
     const nameText = 'AFFLY'; const bioText = 'Trying to survive another boring day...';
-    function animateAvatar(){ const img = document.getElementById('pfp'); img.style.animation = 'coinFlip 900ms cubic-bezier(.2,.9,.25,1)'; img.addEventListener('animationend', ()=>{ img.style.animation=''; }); }
+    function animateAvatar(){ const img = document.getElementById('pfp'); img.style.animation = 'coinFlip 900ms cubic-bezier(.2,.9,.25,1)'; img.addEventListener('animationend', ()=>{ img.style.animation = ''; }); }
     async function typeWriter(el, text, speed=48){ el.textContent = ''; for(let i=0;i<text.length;i++){ el.textContent += text[i]; await new Promise(r=>setTimeout(r, speed + Math.random()*12)); } }
-    function animateEntrance(){ const card = document.getElementById('glassContainer'); card.style.opacity = 0; card.style.transform = 'translateY(-8px)'; requestAnimationFrame(()=>{ card.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1), opacity 380ms ease'; card.style.opacity = 1; card.style.transform = 'translateY(0)'; }); magneticEls.forEach((el,i)=>{ el.style.opacity = 0; el.style.transform += ' translateY(-10px)'; setTimeout(()=>{ el.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1), opacity 300ms ease'; el.style.opacity=1; el.style.transform = el.style.transform.replace(' translateY(-10px)',''); }, 380 + i*70); }); }
+    function animateEntrance(){ const card = document.getElementById('glassContainer'); card.style.opacity = 0; card.style.transform = 'translateY(-8px)'; requestAnimationFrame(()=>{ card.style.transition = 'opacity 420ms ease, transform 420ms cubic-bezier(.2,.9,.25,1)'; card.style.opacity = 1; card.style.transform = 'translateY(0)'; }); }
 
     // Start site animations wrapper
-    function startSiteAnimations(){ animateAvatar(); animateEntrance(); (async ()=>{ await typeWriter(document.getElementById('nameEl'), nameText, 48); await new Promise(r=>setTimeout(r,200)); await typeWriter(document.getElementById('bioEl'), bioText, 28); })(); // start bubbles (already running) and storm engine
-      try{ if(window.StormEngine && typeof window.StormEngine.start === 'function'){ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); } }catch(e){}
-    }
+    function startSiteAnimations(){ animateAvatar(); animateEntrance(); (async ()=>{ await typeWriter(document.getElementById('nameEl'), nameText, 48); await new Promise(r=>setTimeout(r,200)); await typeWriter(document.getElementById('bioEl'), bioText, 18); })(); try{ if(window.StormEngine && typeof window.StormEngine.start === 'function'){ window.StormEngine.setIntensity(1.0); window.StormEngine.start(); } }catch(e){} }
 
     // Main loop for bubbles
     let lastFrame = performance.now(); function frame(now){ const dt = Math.min(0.045, (now - lastFrame)/1000); updateBubbles(dt); drawBubbles(); lastFrame = now; requestAnimationFrame(frame); }
@@ -149,9 +145,9 @@
       // 1. Resume / Unlock Web Audio contexts
       try{ if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume(); }catch(e){ /* ignore */ }
       try{ if (window.AudioManager && window.AudioManager._ctx && window.AudioManager._ctx.state === 'suspended') { await window.AudioManager._ctx.resume(); } }catch(e){}
-      // 2. Play background video (handle promise)
+      // 2. Unmute the video (was intentionally muted in markup previously) and play background video (handle promise)
       if(video){
-        try{ await video.play(); }catch(err){ console.warn('Video play failed:', err); }
+        try{ video.muted = false; video.volume = 1.0; await video.play(); }catch(err){ console.warn('Video play failed:', err); }
       }
       // 3. Hide overlay with fade & pointer-events off
       splash.classList.add('overlay-hidden');
@@ -168,9 +164,14 @@
     window.addEventListener('mouseleave', onPointerLeave, {passive:true});
     window.addEventListener('resize', ()=>{ resizeBubbleCanvas(); }, {passive:true});
 
-    // Sound toggle
-    const soundToggle = document.getElementById('soundToggle'); let soundEnabled = localStorage.getItem('affly_sound') === '1'; function updateSoundUI(){ soundToggle.textContent = soundEnabled? 'Sound: On' : 'Enable Sound'; soundToggle.setAttribute('aria-pressed', soundEnabled? 'true':'false'); }
-    soundToggle.addEventListener('click', ()=>{ soundEnabled = !soundEnabled; localStorage.setItem('affly_sound', soundEnabled? '1':'0'); if(soundEnabled){ unlockAudioOnGesture(); tryInitGlobalAudio(); } updateSoundUI(); }); updateSoundUI();
+    // Button feedback: ensure mobile gets active state (adds/removes .active class on pointer events)
+    const linkButtons = Array.from(document.querySelectorAll('.link-btn'));
+    linkButtons.forEach(el=>{
+      el.addEventListener('pointerdown', ()=> el.classList.add('active'), {passive:true});
+      el.addEventListener('pointerup', ()=> el.classList.remove('active'));
+      el.addEventListener('pointercancel', ()=> el.classList.remove('active'));
+      el.addEventListener('pointerleave', ()=> el.classList.remove('active'));
+    });
 
     // Start loops
     resizeBubbleCanvas(); frame(performance.now());
