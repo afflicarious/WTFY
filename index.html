@@ -137,10 +137,26 @@
     let animationsStarted = false; // animations (spider/avatar) started
     let bubbleRAF = null; // rAF id for bubble loop
 
+    /* --- Fallback audio for devices that block unmuted video audio --- */
+    let bgAudioFallback = null;
+    let playAttempted = false;
+    async function playFallbackAudio(){
+      try{
+        if(bgAudioFallback){ await bgAudioFallback.play(); console.log('[audio] fallback already created -> play()'); return; }
+        // try to play a short fallback audio file (must exist in repo)
+        bgAudioFallback = new Audio('Cowboy.mp3');
+        bgAudioFallback.loop = true;
+        bgAudioFallback.volume = 1.0;
+        await bgAudioFallback.play();
+        console.log('[audio] fallback playing');
+      }catch(err){ console.warn('[audio] fallback play failed', err); }
+    }
+
     /* Helper to reveal UI (idempotent) */
     function revealUI(){
       if(uiRevealed) return;
       uiRevealed = true;
+      console.log('[lifecycle] revealUI');
       document.body.classList.add('site-started');
       const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row');
       toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; });
@@ -188,8 +204,8 @@
     function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); bCtx.globalCompositeOperation = 'lighter'; for(const p of bubbles){ bCtx.save(); const r = p.currentR || p.r; if(!isTouch){ bCtx.shadowBlur = Math.max(8, r * 0.9); bCtx.shadowColor = `hsla(${p.hue}, 85%, 68%, ${p.alpha*0.85})`; } const inner = r * 0.12; const grd = bCtx.createRadialGradient(p.x - r*0.25, p.y - r*0.35, inner, p.x, p.y, r); grd.addColorStop(0, `hsla(${p.hue}, 85%, 92%, ${p.alpha})`); grd.addColorStop(0.5, `hsla(${p.hue}, 85%, 78%, ${p.alpha*0.75})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, r, 0, Math.PI*2); bCtx.fill(); bCtx.lineWidth = Math.max(0.4, r * 0.02); bCtx.strokeStyle = `rgba(255,255,255,${isTouch?0.06:0.04})`; bCtx.stroke(); bCtx.restore(); } bCtx.globalCompositeOperation = 'source-over'; for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
 
     /* Bubble loop control */
-    function startBubbleLoop(){ if(bubbleRAF) return; function loop(now){ bubbleRAF = requestAnimationFrame(loop); const dt = Math.min(0.045, (now - (startBubbleLoop.last||now))/1000); updateBubbles(dt); drawBubbles(); startBubbleLoop.last = now; } bubbleRAF = requestAnimationFrame(loop); }
-    function stopBubbleLoop(){ if(bubbleRAF){ cancelAnimationFrame(bubbleRAF); bubbleRAF = null; startBubbleLoop.last = null; } }
+    function startBubbleLoop(){ if(bubbleRAF) return; console.log('[lifecycle] startBubbleLoop'); function loop(now){ bubbleRAF = requestAnimationFrame(loop); const dt = Math.min(0.045, (now - (startBubbleLoop.last||now))/1000); updateBubbles(dt); drawBubbles(); startBubbleLoop.last = now; } bubbleRAF = requestAnimationFrame(loop); }
+    function stopBubbleLoop(){ if(bubbleRAF){ cancelAnimationFrame(bubbleRAF); bubbleRAF = null; startBubbleLoop.last = null; console.log('[lifecycle] stopBubbleLoop'); } }
 
     /* Pointer interactions: popping */
     function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= (b.currentR||b.r)*(b.currentR||b.r)){ popBubble(b); bubbles.splice(i,1); } } }
@@ -273,6 +289,7 @@
     async function startSiteAnimations(){
       if(animationsStarted) return; // guard so animations (spider/avatar) run only once
       animationsStarted = true;
+      console.log('[lifecycle] startSiteAnimations');
 
       try{
         // Avatar toss can run concurrently
@@ -316,14 +333,20 @@
       // resume audio context to increase the chance browsers allow audio
       try{ await ensureAudioContextAndResume(); }catch(e){}
 
-      if(video){
+      if(video && !playAttempted){
+        playAttempted = true;
         video.muted = false;
         video.volume = 1.0;
         try{
           await video.play();
+          console.log('[media] video.play() succeeded');
         }catch(err){
-          console.warn('Video play failed (attempting fallback):', err);
+          console.warn('[media] video.play() rejected — attempting fallback audio', err);
+          // attempt fallback audio file (Cowboy.mp3) if available
+          playFallbackAudio();
         }
+      } else if (video && playAttempted) {
+        console.log('[media] play already attempted');
       }
 
       // hide splash quickly
@@ -375,6 +398,9 @@
         }
       }catch(e){}
     }, 900);
+
+    // debug inspector
+    window.__dbgState = function(){ return { uiRevealed, animationsStarted, bubbleLoopActive:!!bubbleRAF, playAttempted, video: (document.getElementById('bgVideo')?{paused:document.getElementById('bgVideo').paused, muted:document.getElementById('bgVideo').muted}:null) }; };
   </script>
 </body>
 </html>
