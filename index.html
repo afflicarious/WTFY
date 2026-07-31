@@ -46,7 +46,7 @@
     .profile-row{display:flex;align-items:center;gap:14px;justify-content:center}
     .profile-image{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0;border:2px solid rgba(255,255,255,0.06);transform-origin:center;backface-visibility:hidden;will-change:transform}
 
-    .name{color:var(--text);font-size:26px;letter-spacing:0.12em;text-transform:uppercase;margin:0;opacity:0;position:relative}
+    .name{color:var(--text);font-size:26px;letter-spacing:0.12em;text-transform:uppercase;margin:0;opacity:0;position:relative;padding-left:44px}
     .bio{color:var(--muted);margin:6px 0 16px;opacity:0;transform:translateY(6px)}
 
     /* refined fall-in */
@@ -71,7 +71,12 @@
     /* bio reveal */
     .bio.in { opacity:1; transform:none; transition: opacity 420ms var(--ease-slow), transform 420ms var(--ease-slow); }
 
-    /* subtle per-char baseline for JS fallback */
+    /* spider logo */
+    .spider{ pointer-events:none; will-change:transform,opacity; position:absolute }
+    .spider-logo{ left:0; top:0; transform-origin:center; opacity:1; transition:transform 420ms var(--ease-standard), opacity 420ms ease; transform: translateX(-8px) scale(0.92); }
+    .spider-svg{ width:28px; height:28px; display:block; fill:var(--accent); stroke:rgba(255,255,255,0.95); }
+
+    /* prefers-reduced-motion */
     @media (prefers-reduced-motion: reduce){
       * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
       #bubbleCanvas, #stormCanvas { display:none !important; }
@@ -117,6 +122,15 @@
     /* --- Helpers --- */
     const rand = (min,max) => Math.random()*(max-min)+min;
     const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+    /* --- Audio context resume helper --- */
+    let audioCtx = null;
+    async function ensureAudioContextAndResume(){
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') await audioCtx.resume();
+      }catch(e){ /* ignore if not available */ }
+    }
 
     /* --- Bubble canvas (refined) --- */
     const bubbleCanvas = document.getElementById('bubbleCanvas');
@@ -217,7 +231,17 @@
                 chars[i].classList.add('revealed');
               }
             }
-            if(t < 1 && !prefersReducedMotion){ requestAnimationFrame(step); } else { for(const s of chars){ s.classList.add('revealed'); } setTimeout(()=>{ spiderWrap.remove(); resolve(); }, 320); }
+            if(t < 1 && !prefersReducedMotion){ requestAnimationFrame(step); } else {
+              for(const s of chars){ s.classList.add('revealed'); }
+
+              // Instead of removing the spider, pin it as a logo beside the name
+              spiderWrap.classList.add('spider-logo');
+              spiderWrap.style.left = '0px';
+              spiderWrap.style.top = '0px';
+              spiderWrap.style.transform = 'translateX(-8px) scale(0.92)';
+
+              setTimeout(()=>{ resolve(); }, 320);
+            }
           }
           requestAnimationFrame(step);
         });
@@ -249,7 +273,22 @@
     /* Overlay click */
     const splash = document.getElementById('splashScreen'); const video = document.getElementById('bgVideo');
     splash.addEventListener('click', async (ev) => {
-      ev.stopPropagation(); try{ if(video){ video.muted = false; video.volume = 1.0; await video.play(); } }catch(err){}
+      ev.stopPropagation();
+      // resume audio context to increase the chance browsers allow audio
+      try{ await ensureAudioContextAndResume(); }catch(e){}
+
+      if(video){
+        video.muted = false;
+        video.volume = 1.0;
+        try{
+          await video.play();
+        }catch(err){
+          console.warn('Video play failed (attempting fallback):', err);
+          // optional fallback: create and play an <audio> if you include a separate audio file
+          // const bgAudio = document.createElement('audio'); bgAudio.src = 'Cowboy.mp3'; bgAudio.loop = true; bgAudio.autoplay = true; document.body.appendChild(bgAudio);
+        }
+      }
+
       splash.classList.add('overlay-hidden'); setTimeout(()=>{ splash.style.display = 'none'; }, 520);
       try{ startSiteAnimations(); }catch(err){ console.error('startSiteAnimations error', err); }
     }, {passive:false});
