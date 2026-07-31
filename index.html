@@ -132,6 +132,10 @@
       }catch(e){ /* ignore if not available */ }
     }
 
+    /* --- State guards to prevent double-starts / multiple loops --- */
+    let siteStarted = false; // ensures startSiteAnimations runs only once
+    let bubbleRAF = null; // rAF id for bubble loop
+
     /* --- Bubble canvas (refined) --- */
     const bubbleCanvas = document.getElementById('bubbleCanvas');
     const bCtx = bubbleCanvas.getContext('2d');
@@ -144,6 +148,8 @@
       bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR);
       bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0);
       if(typeof bCtx.imageSmoothingEnabled !== 'undefined') bCtx.imageSmoothingEnabled = true;
+      // trim bubbles if window shrank
+      for(let i=bubbles.length-1;i>=0;i--){ if(bubbles[i].x > bW + 200) bubbles.splice(i,1); }
       const initial = Math.floor(MAX_BUBBLES * (isTouch ? 0.45 : 0.3));
       while(bubbles.length < initial) createBubble();
     }
@@ -151,7 +157,7 @@
     function createBubble(){
       if(bubbles.length >= MAX_BUBBLES) return;
       const r = rand(isTouch ? 10 : 18, isTouch ? 36 : 64);
-      const x = rand(r, bW - r);
+      const x = rand(r, Math.max(bW - r, r));
       const y = bH + r + rand(0, 80);
       const vy = -rand(isTouch ? 12 : 22, isTouch ? 28 : 60);
       const vx = rand(-6,6);
@@ -170,6 +176,10 @@
     }
 
     function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); bCtx.globalCompositeOperation = 'lighter'; for(const p of bubbles){ bCtx.save(); const r = p.currentR || p.r; if(!isTouch){ bCtx.shadowBlur = Math.max(8, r * 0.9); bCtx.shadowColor = `hsla(${p.hue}, 85%, 68%, ${p.alpha*0.85})`; } const inner = r * 0.12; const grd = bCtx.createRadialGradient(p.x - r*0.25, p.y - r*0.35, inner, p.x, p.y, r); grd.addColorStop(0, `hsla(${p.hue}, 85%, 92%, ${p.alpha})`); grd.addColorStop(0.5, `hsla(${p.hue}, 85%, 78%, ${p.alpha*0.75})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, r, 0, Math.PI*2); bCtx.fill(); bCtx.lineWidth = Math.max(0.4, r * 0.02); bCtx.strokeStyle = `rgba(255,255,255,${isTouch?0.06:0.04})`; bCtx.stroke(); bCtx.restore(); } bCtx.globalCompositeOperation = 'source-over'; for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
+
+    /* Bubble loop control */
+    function startBubbleLoop(){ if(bubbleRAF) return; function loop(now){ bubbleRAF = requestAnimationFrame(loop); const dt = Math.min(0.045, (now - (startBubbleLoop.last||now))/1000); updateBubbles(dt); drawBubbles(); startBubbleLoop.last = now; } bubbleRAF = requestAnimationFrame(loop); }
+    function stopBubbleLoop(){ if(bubbleRAF){ cancelAnimationFrame(bubbleRAF); bubbleRAF = null; startBubbleLoop.last = null; } }
 
     /* Pointer interactions: popping */
     function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= (b.currentR||b.r)*(b.currentR||b.r)){ popBubble(b); bubbles.splice(i,1); } } }
@@ -234,7 +244,7 @@
             if(t < 1 && !prefersReducedMotion){ requestAnimationFrame(step); } else {
               for(const s of chars){ s.classList.add('revealed'); }
 
-              // Instead of removing the spider, pin it as a logo beside the name
+              // Pin spider as a logo beside the name to avoid removing it
               spiderWrap.classList.add('spider-logo');
               spiderWrap.style.left = '0px';
               spiderWrap.style.top = '0px';
@@ -251,6 +261,7 @@
     function revealBio(el, text){ el.textContent = text; el.classList.add('in'); }
 
     async function startSiteAnimations(){
+      if(siteStarted) return; siteStarted = true;
       const avatarPromise = animateAvatarToss();
       const children = [document.querySelector('.profile-row'), document.getElementById('linksGrid')];
       let delay = 80;
@@ -264,17 +275,17 @@
     }
 
     /* Visibility and motion handling */
-    let animateRunning = true; let lastFrame = performance.now();
-    document.addEventListener('visibilitychange', () => { if(document.hidden){ animateRunning = false; } else { animateRunning = true; lastFrame = performance.now(); requestAnimationFrame(frame); } });
-    if(prefersReducedMotion){ bubbles.length = 0; const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } document.body.classList.add('site-started'); document.querySelectorAll('.fall').forEach(ch=>{ ch.classList.remove('fall'); ch.classList.add('in'); }); }
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden){ stopBubbleLoop(); } else { if(!prefersReducedMotion) startBubbleLoop(); }
+    });
 
-    function frame(now){ if(!animateRunning) return; const dt = Math.min(0.045, (now - lastFrame)/1000); updateBubbles(dt); drawBubbles(); lastFrame = now; requestAnimationFrame(frame); }
+    if(prefersReducedMotion){ bubbles.length = 0; const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } document.body.classList.add('site-started'); document.querySelectorAll('.fall').forEach(ch=>{ ch.classList.remove('fall'); ch.classList.add('in'); }); }
 
     /* Overlay click */
     const splash = document.getElementById('splashScreen'); const video = document.getElementById('bgVideo');
     splash.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      // resume audio context to increase the chance browsers allow audio
+      if(siteStarted) return; // prevent double start on repeated clicks
       try{ await ensureAudioContextAndResume(); }catch(e){}
 
       if(video){
@@ -284,8 +295,6 @@
           await video.play();
         }catch(err){
           console.warn('Video play failed (attempting fallback):', err);
-          // optional fallback: create and play an <audio> if you include a separate audio file
-          // const bgAudio = document.createElement('audio'); bgAudio.src = 'Cowboy.mp3'; bgAudio.loop = true; bgAudio.autoplay = true; document.body.appendChild(bgAudio);
         }
       }
 
@@ -314,13 +323,25 @@
     });
 
     /* Start loops */
-    resizeBubbleCanvas(); if(!prefersReducedMotion) requestAnimationFrame(frame);
+    resizeBubbleCanvas(); if(!prefersReducedMotion) startBubbleLoop();
 
     /* Accessibility: Enter to remove overlay */
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !splash.classList.contains('overlay-hidden')){ splash.click(); } });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !siteStarted && !splash.classList.contains('overlay-hidden')){ splash.click(); } });
 
-    /* Auto-enter fallback */
-    setTimeout(()=>{ try{ if(splash && !splash.classList.contains('overlay-hidden')){ splash.classList.add('overlay-hidden'); setTimeout(()=>{ splash.style.display='none'; },520); try{ startSiteAnimations(); }catch(e){} document.body.classList.add('site-started'); const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row'); toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; }); } }catch(e){} }, 900);
+    /* Auto-enter fallback: reveal UI only (do not start audio/complex animations)
+       This prevents accidental multiple starts on refresh and ensures deterministic state */
+    setTimeout(()=>{
+      try{
+        if(splash && !splash.classList.contains('overlay-hidden') && !siteStarted){
+          // Reveal the UI without starting the audio-dependent animations
+          splash.classList.add('overlay-hidden');
+          setTimeout(()=>{ splash.style.display='none'; },520);
+          document.body.classList.add('site-started');
+          const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row');
+          toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; });
+        }
+      }catch(e){}
+    }, 900);
   </script>
 </body>
 </html>
