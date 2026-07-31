@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Link in Bio</title>
   <style>
-    /* Design tokens & refined baseline */
     :root{
       --bg: #05060a;
       --panel-bg: rgba(255,255,255,0.02);
@@ -13,12 +12,10 @@
       --text: #f6f6f7;
       --accent: #C9A95B;
       --radius-lg: 24px;
-      --radius-md: 12px;
       --ease-standard: cubic-bezier(.22,.9,.3,1);
       --ease-slow: cubic-bezier(.16,.85,.28,1);
       --short: 280ms;
       --medium: 560ms;
-      --long: 920ms;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
@@ -26,20 +23,21 @@
     body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;position:relative}
 
     /* Background video and dimmer */
-    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-4}
-    body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.28),rgba(0,0,0,0.36));z-index:-3;pointer-events:none}
+    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-6}
+    body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.28),rgba(0,0,0,0.36));z-index:-5;pointer-events:none}
 
     /* Canvases */
-    #stormCanvas, #bubbleCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:block}
-    #stormCanvas{z-index:-2;mix-blend-mode:screen;will-change:transform}
-    #bubbleCanvas{z-index:-1}
+    /* stormCanvas unused for now but reserved */
+    #stormCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:block;z-index:-4}
+    /* bubbles should appear above the UI visually but should not block pointer events to the UI */
+    #bubbleCanvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:block;z-index:60}
 
     /* Splash overlay */
     #splashScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1050;background:rgba(0,0,0,0.65);cursor:pointer;transition:opacity .5s var(--ease-standard)}
     #splashScreen .overlay-text{color:#fff;font-family:'Courier New',monospace;font-size:18px;letter-spacing:.14em;padding:14px 22px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))}
     #splashScreen.overlay-hidden{opacity:0;pointer-events:none}
 
-    /* Glass panel */
+    /* Glass panel (UI) */
     .glass-container{position:relative;z-index:10;background:linear-gradient(180deg,var(--panel-bg),rgba(255,255,255,0.01));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--radius-lg);padding:28px;width:min(760px,92vw);box-shadow:0 6px 30px rgba(0,0,0,0.6);transition:box-shadow var(--medium) var(--ease-standard),transform var(--medium) var(--ease-standard)}
     .glass-container::after{content:'';position:absolute;inset:-8px;border-radius:var(--radius-lg);pointer-events:none;box-shadow:0 0 60px 10px rgba(201,169,91,0.06);filter:blur(6px);opacity:1;transition:opacity var(--medium) var(--ease-standard)}
 
@@ -49,16 +47,13 @@
     .name{color:var(--text);font-size:26px;letter-spacing:0.12em;text-transform:uppercase;margin:0;opacity:0;position:relative;padding-left:44px}
     .bio{color:var(--muted);margin:6px 0 16px;opacity:0;transform:translateY(6px)}
 
-    /* refined fall-in */
     .fall { opacity:0; transform: translateY(-18px) scale(0.998); will-change:transform,opacity; }
     .fall.in { opacity:1; transform:none; transition: transform var(--medium) var(--ease-standard), opacity calc(var(--medium) - 120ms) ease; }
 
-    /* links grid and buttons */
     .links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;opacity:0;transform:translateY(6px) scale(0.999);transition:opacity var(--short) var(--ease-standard),transform var(--short) var(--ease-standard)}
     .site-started .links-grid{opacity:1;transform:none}
     .link-btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 14px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));color:var(--muted);font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,0.45);transition: transform 320ms var(--ease-standard), box-shadow 320ms var(--ease-standard), background-color 320ms var(--ease-standard)}
     .link-btn:hover{ transform: translateY(-3px); box-shadow:0 18px 48px rgba(0,0,0,0.5); color:var(--text); background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)); }
-    .link-btn:active{ transform: translateY(-1px) }
 
     @media(max-width:420px){.links-grid{grid-template-columns:repeat(3,1fr)} }
     @media(max-width:320px){.links-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
@@ -68,23 +63,13 @@
     .char-pop{ display:inline-block; opacity:0; transform:translateY(8px); will-change:transform,opacity; }
     .char-pop.revealed{ animation: charReveal 460ms var(--ease-slow) both; }
 
-    /* bio reveal */
     .bio.in { opacity:1; transform:none; transition: opacity 420ms var(--ease-slow), transform 420ms var(--ease-slow); }
 
-    /* spider logo */
-    .spider{ pointer-events:none; will-change:transform,opacity; position:absolute }
-    .spider-logo{ left:0; top:0; transform-origin:center; opacity:1; transition:transform 420ms var(--ease-standard), opacity 420ms ease; transform: translateX(-8px) scale(0.92); }
-    .spider-svg{ width:28px; height:28px; display:block; fill:var(--accent); stroke:rgba(255,255,255,0.95); }
-
     /* prefers-reduced-motion */
-    @media (prefers-reduced-motion: reduce){
-      * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
-      #bubbleCanvas, #stormCanvas { display:none !important; }
-    }
+    @media (prefers-reduced-motion: reduce){ * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } #bubbleCanvas, #stormCanvas { display:none !important; } }
   </style>
 </head>
 <body>
-  <!-- removed autoplay to avoid background starting without user click -->
   <video id="bgVideo" playsinline webkit-playsinline loop preload="auto" muted>
     <source src="Cowboy.mp4" type="video/mp4">
   </video>
@@ -122,54 +107,138 @@
     const rand = (min,max) => Math.random()*(max-min)+min;
     const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 
+    // Audio context helper
     let audioCtx = null;
     async function ensureAudioContextAndResume(){
       try{ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') await audioCtx.resume(); }catch(e){}
     }
 
-    // State
+    // small pop sound via WebAudio (no external file needed)
+    function playPopSound(){
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.6, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        const bi = audioCtx.createBiquadFilter(); bi.type = 'highpass'; bi.frequency.value = 800;
+
+        const o = audioCtx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(rand(800,1200), now);
+        o.connect(bi);
+        bi.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.16);
+
+        // small noise burst
+        const bufferSize = 0.1 * audioCtx.sampleRate;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * Math.exp(-i / (bufferSize*0.08));
+        const noise = audioCtx.createBufferSource(); noise.buffer = buffer; const ng = audioCtx.createGain(); ng.gain.setValueAtTime(0.5, now); ng.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        noise.connect(ng); ng.connect(bi);
+        noise.start(now);
+        noise.stop(now + 0.12);
+
+        // cleanup
+        setTimeout(()=>{ try{ o.disconnect(); noise.disconnect(); g.disconnect(); bi.disconnect(); }catch(e){} }, 500);
+      }catch(e){ console.warn('pop sound failed', e); }
+    }
+
+    // state
     let uiRevealed = false;
     let animationsStarted = false;
     let bubbleRAF = null;
-
-    // Fallback audio
-    let bgAudioFallback = null;
     let playAttempted = false;
-    async function playFallbackAudio(){
-      try{
-        if(bgAudioFallback){ await bgAudioFallback.play(); return; }
-        bgAudioFallback = new Audio('Cowboy.mp3'); bgAudioFallback.loop = true; bgAudioFallback.volume = 1.0; await bgAudioFallback.play();
-      }catch(err){ console.warn('[audio] fallback play failed', err); }
-    }
 
-    function revealUI(){ if(uiRevealed) return; uiRevealed = true; document.body.classList.add('site-started'); const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row'); toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; }); }
-
+    // bubble system
     const bubbleCanvas = document.getElementById('bubbleCanvas');
     const bCtx = bubbleCanvas.getContext('2d');
-    let bW = 0, bH = 0, bDPR = 1; const bubbles = []; const bubbleParticles = [];
-    let MAX_BUBBLES = isTouch ? 40 : 120;
+    let bW = 0, bH = 0, bDPR = 1;
+    const bubbles = [];
+    const particles = [];
+    const MAX_BUBBLES = isTouch ? 40 : 220; // noticeable
+    const cornerThreshold = 88; // distance to corner to trigger pop
 
-    function resizeBubbleCanvas(){ bDPR = isTouch ? 1 : Math.min(window.devicePixelRatio || 1, 2); bW = window.innerWidth; bH = window.innerHeight; bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR); bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0); if(typeof bCtx.imageSmoothingEnabled !== 'undefined') bCtx.imageSmoothingEnabled = true; for(let i=bubbles.length-1;i>=0;i--){ if(bubbles[i].x > bW + 200) bubbles.splice(i,1); } const initial = Math.floor(MAX_BUBBLES * (isTouch ? 0.45 : 0.3)); while(bubbles.length < initial) createBubble(); }
+    function resizeBubbleCanvas(){
+      bDPR = isTouch ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+      bW = window.innerWidth; bH = window.innerHeight;
+      bubbleCanvas.width = Math.floor(bW * bDPR); bubbleCanvas.height = Math.floor(bH * bDPR);
+      bubbleCanvas.style.width = bW+'px'; bubbleCanvas.style.height = bH+'px'; bCtx.setTransform(bDPR,0,0,bDPR,0,0);
+    }
 
-    function createBubble(){ if(bubbles.length >= MAX_BUBBLES) return; const r = rand(isTouch ? 10 : 18, isTouch ? 36 : 64); const x = rand(r, Math.max(bW - r, r)); const y = bH + r + rand(0, 80); const vy = -rand(isTouch ? 12 : 22, isTouch ? 28 : 60); const vx = rand(-6,6); const alpha = isTouch ? rand(0.18,0.45) : rand(0.08,0.28); const hue = 220 + Math.random()*40; const wobbleAmp = rand(6, 22) * (r/36); const wobbleFreq = rand(0.3, 0.9); const pulse = {amp: rand(0.01,0.04), freq: rand(0.4,1.0)}; bubbles.push({x, y, baseX:x, r, vy, vx, alpha, age:0, hue, wobble: Math.random()*Math.PI*2, wobbleAmp, wobbleFreq, pulse}); }
+    function createBubble(){
+      if(bubbles.length >= MAX_BUBBLES) return;
+      const r = rand(isTouch?8:14, isTouch?28:44);
+      const x = rand(r, bW - r);
+      const y = bH + r + rand(0, 40);
+      const vy = -rand(isTouch?22:40, isTouch?48:140);
+      const wobble = rand(0.8,2.2);
+      const hue = 200 + Math.random()*30;
+      const alpha = clamp(0.16 + (44 - r)/200, 0.04, 0.36);
+      bubbles.push({x,y,baseX:x,r,vy,vx:rand(-8,8),age:0,hue,alpha,wobble});
+    }
 
-    function popBubble(b){ const count = Math.round(clamp(b.r/8, isTouch?2:3, isTouch?8:10)); for(let i=0;i<count;i++){ const angle = rand(0,Math.PI*2); const speed = rand(20,120); bubbleParticles.push({x:b.x,y:b.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,age:0,life:0.6,r:Math.max(1,b.r*0.18)}); } }
+    function popBubbleAtIndex(i, byClick=false){
+      const b = bubbles[i]; if(!b) return;
+      // spawn particles
+      const count = Math.round(clamp(b.r/6, 6, 20));
+      for(let k=0;k<count;k++){
+        const angle = rand(0,Math.PI*2);
+        const speed = rand(40,260);
+        particles.push({x:b.x, y:b.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, age:0, life:0.6 + Math.random()*0.3, r:Math.max(1, b.r*0.12)});
+      }
+      // pop sound
+      try{ ensureAudioContextAndResume().then(()=>playPopSound()); }catch(e){}
+      bubbles.splice(i,1);
+    }
 
-    function updateBubbles(dt){ if(Math.random() < (isTouch ? 0.12 : 0.04)) createBubble(); for(let i=bubbles.length-1;i>=0;i--){ const p=bubbles[i]; p.age += dt; p.wobble += dt * p.wobbleFreq * 2 * Math.PI; p.x = p.baseX + Math.sin(p.wobble) * p.wobbleAmp + p.vx * p.age * 0.01; p.y += p.vy * dt + Math.sin(p.age * 2.0) * (p.r*0.0015); p.currentR = p.r * (1 + Math.sin(p.age * p.pulse.freq * Math.PI * 2) * p.pulse.amp); if(p.x - p.currentR <= 0 || p.x + p.currentR >= bW || p.y - p.currentR <= 0){ popBubble(p); bubbles.splice(i,1); continue; } if(p.y + p.currentR < -120){ bubbles.splice(i,1); continue; } } for(let i=bubbleParticles.length-1;i>=0;i--){ const sp=bubbleParticles[i]; sp.vy += 600 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.985; if(sp.age >= sp.life) bubbleParticles.splice(i,1); } }
+    function updateBubbles(dt){
+      // ensure a steady stream up to MAX_BUBBLES
+      while(bubbles.length < MAX_BUBBLES) createBubble();
+      for(let i=bubbles.length-1;i>=0;i--){
+        const p = bubbles[i]; p.age += dt; p.x = p.baseX + Math.sin(p.age * p.wobble) * (p.r * 0.12) + p.vx * p.age * 0.002; p.y += p.vy * dt;
+        // pop when touching top edge
+        if(p.y + p.r < -20){ popBubbleAtIndex(i); continue; }
+        // pop when close to top-left or top-right corner
+        const dTL = Math.hypot(p.x - 0, p.y - 0);
+        const dTR = Math.hypot(p.x - bW, p.y - 0);
+        if(dTL <= cornerThreshold || dTR <= cornerThreshold){ popBubbleAtIndex(i); continue; }
+      }
+      for(let j=particles.length-1;j>=0;j--){ const sp = particles[j]; sp.vy += 800 * dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.age += dt; sp.r *= 0.98; if(sp.age >= sp.life) particles.splice(j,1); }
+    }
 
-    function drawBubbles(){ bCtx.clearRect(0,0,bW,bH); bCtx.globalCompositeOperation = 'lighter'; for(const p of bubbles){ bCtx.save(); const r = p.currentR || p.r; if(!isTouch){ bCtx.shadowBlur = Math.max(8, r * 0.9); bCtx.shadowColor = `hsla(${p.hue}, 85%, 68%, ${p.alpha*0.85})`; } const inner = r * 0.12; const grd = bCtx.createRadialGradient(p.x - r*0.25, p.y - r*0.35, inner, p.x, p.y, r); grd.addColorStop(0, `hsla(${p.hue}, 85%, 92%, ${p.alpha})`); grd.addColorStop(0.5, `hsla(${p.hue}, 85%, 78%, ${p.alpha*0.75})`); grd.addColorStop(1, `rgba(255,255,255,0)`); bCtx.fillStyle = grd; bCtx.beginPath(); bCtx.arc(p.x, p.y, r, 0, Math.PI*2); bCtx.fill(); bCtx.lineWidth = Math.max(0.4, r * 0.02); bCtx.strokeStyle = `rgba(255,255,255,${isTouch?0.06:0.04})`; bCtx.stroke(); bCtx.restore(); } bCtx.globalCompositeOperation = 'source-over'; for(const sp of bubbleParticles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.92)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); } }
+    function drawBubbles(){
+      bCtx.clearRect(0,0,bW,bH);
+      bCtx.globalCompositeOperation = 'lighter';
+      for(const p of bubbles){
+        bCtx.save(); const r = p.r; // soft pearl gradient
+        const grd = bCtx.createRadialGradient(p.x - r*0.22, p.y - r*0.28, r*0.06, p.x, p.y, r);
+        grd.addColorStop(0, `rgba(255,255,255,${Math.min(0.95, p.alpha*1.6)})`);
+        grd.addColorStop(0.45, `rgba(240,245,255,${Math.min(0.6, p.alpha*1.1)})`);
+        grd.addColorStop(1, `rgba(255,255,255,0)`);
+        bCtx.fillStyle = grd;
+        bCtx.beginPath(); bCtx.arc(p.x, p.y, r, 0, Math.PI*2); bCtx.fill();
+        bCtx.lineWidth = Math.max(0.6, r*0.02);
+        bCtx.strokeStyle = `rgba(255,255,255,${Math.min(0.22, p.alpha*0.9)})`;
+        bCtx.stroke();
+        bCtx.restore();
+      }
+      bCtx.globalCompositeOperation = 'source-over';
+      for(const sp of particles){ bCtx.save(); bCtx.fillStyle = 'rgba(255,255,255,0.95)'; bCtx.beginPath(); bCtx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2); bCtx.fill(); bCtx.restore(); }
+    }
 
     function startBubbleLoop(){ if(bubbleRAF) return; function loop(now){ bubbleRAF = requestAnimationFrame(loop); const dt = Math.min(0.045, (now - (startBubbleLoop.last||now))/1000); updateBubbles(dt); drawBubbles(); startBubbleLoop.last = now; } bubbleRAF = requestAnimationFrame(loop); }
     function stopBubbleLoop(){ if(bubbleRAF){ cancelAnimationFrame(bubbleRAF); bubbleRAF = null; startBubbleLoop.last = null; } }
 
-    function handlePointerDown(e){ const x = (e.touches?e.touches[0].clientX:e.clientX); const y = (e.touches?e.touches[0].clientY:e.clientY); for(let i=bubbles.length-1;i>=0;i--){ const b=bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= (b.currentR||b.r)*(b.currentR||b.r)){ popBubble(b); bubbles.splice(i,1); } } }
+    // pointer interaction (pop on click)
+    function handleGlobalPointerDown(e){ const x = e.touches ? e.touches[0].clientX : e.clientX; const y = e.touches ? e.touches[0].clientY : e.clientY; // check bubble hits
+      for(let i=bubbles.length-1;i>=0;i--){ const b = bubbles[i]; const dx = x - b.x; const dy = y - b.y; if(dx*dx + dy*dy <= b.r*b.r){ popBubbleAtIndex(i, true); return; } }
+    }
 
-    const magneticEls = !isTouch ? Array.from(document.querySelectorAll('.magnetic')) : [];
-    const pointer = {x: window.innerWidth/2, y: window.innerHeight/2}; let magneticRAF = null;
-    function onPointerMove(e){ pointer.x = e.clientX; pointer.y = e.clientY; if(!magneticRAF) magneticRAF = requestAnimationFrame(updateMagnetic); }
-    function updateMagnetic(){ magneticRAF = null; for (const el of magneticEls) { const r = el.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2; const dx = pointer.x - cx; const dy = pointer.y - cy; const dist = Math.hypot(dx,dy); const max = 88; if(dist < max){ const t = (1 - (dist/max)); const tx = dx * 0.07 * t; const ty = dy * 0.03 * t; el.style.transform = `translate(${tx}px, ${ty}px) scale(${1 + 0.008 * t})`; el.style.boxShadow = `0 ${6 + 20*t}px ${18 + 40*t}px rgba(0,0,0,0.45)`; } else { el.style.transform=''; el.style.boxShadow=''; } } }
-    function onPointerLeave(){ if(magneticRAF){ cancelAnimationFrame(magneticRAF); magneticRAF = null; } magneticEls.forEach(el=>{ el.style.transform=''; el.style.boxShadow=''; }); }
-
+    // page animations
     const nameText = 'AFFLY';
     const bioText = 'Trying to survive another boring day.....';
 
@@ -181,43 +250,32 @@
 
     async function startSiteAnimations(){ if(animationsStarted) return; animationsStarted = true; try{ const avatarPromise = animateAvatarToss(); const nameEl = document.getElementById('nameEl'); await spiderCrawlAndReveal(nameEl, nameText, 1200); revealBio(document.getElementById('bioEl'), bioText); document.body.classList.add('site-started'); await avatarPromise; }catch(err){ console.error('startSiteAnimations error:', err); revealUI(); } }
 
-    document.addEventListener('visibilitychange', () => { if(document.hidden){ stopBubbleLoop(); } else { if(!prefersReducedMotion && uiRevealed) startBubbleLoop(); } });
+    function revealUI(){ if(uiRevealed) return; uiRevealed = true; document.body.classList.add('site-started'); const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row'); toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; }); }
 
-    if(prefersReducedMotion){ bubbles.length = 0; const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } revealUI(); }
-
+    // click flow
     const splash = document.getElementById('splashScreen'); const video = document.getElementById('bgVideo');
+    async function onSplashClick(ev){ ev.preventDefault(); ev.stopPropagation(); revealUI(); if(!prefersReducedMotion) startBubbleLoop(); try{ await ensureAudioContextAndResume(); }catch(e){}
+      if(video && !playAttempted){ playAttempted = true; video.muted = false; video.volume = 1.0; try{ await video.play(); console.log('[media] video.play() succeeded'); }catch(err){ console.warn('[media] video.play() rejected — will use fallback audio', err); playFallbackAudio(); } }
+      splash.classList.add('overlay-hidden'); setTimeout(()=>{ splash.style.display='none'; }, 520);
+      try{ startSiteAnimations(); }catch(err){ console.error(err); }
+    }
+    splash.addEventListener('click', onSplashClick, {passive:false, once:true});
 
-    // Single unified click handler: reveal UI, start bubbles, try play; runs once
-    function onSplashClickFactory(){ return async function splashHandler(ev){ ev.preventDefault(); ev.stopPropagation(); // reveal UI first
-        revealUI(); // start bubble loop
-        if(!prefersReducedMotion) startBubbleLoop(); // resume audio context
-        try{ await ensureAudioContextAndResume(); }catch(e){}
-        // try video play (only once)
-        if(video && !playAttempted){ playAttempted = true; video.muted = false; video.volume = 1.0; try{ await video.play(); console.log('[media] video.play() succeeded'); }catch(err){ console.warn('[media] video.play() rejected — attempting fallback audio', err); playFallbackAudio(); } }
-        // hide splash
-        splash.classList.add('overlay-hidden'); setTimeout(()=>{ splash.style.display = 'none'; }, 520);
-        // start name/avatar animations (guarded inside)
-        try{ startSiteAnimations(); }catch(err){ console.error('startSiteAnimations error', err); }
-      } }
+    // pointer handling - global (so canvas doesn't block UI clicks)
+    window.addEventListener('pointerdown', handleGlobalPointerDown, {passive:true});
 
-    const splashHandler = onSplashClickFactory(); splash.addEventListener('click', splashHandler, {passive:false, once:true});
-
-    window.addEventListener('pointerdown', handlePointerDown, {passive:true});
-    if(!isTouch){ window.addEventListener('mousemove', onPointerMove, {passive:true}); window.addEventListener('mouseleave', onPointerLeave, {passive:true}); }
-
+    // resize
     let resizeTimer = null; window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer = setTimeout(()=>{ resizeBubbleCanvas(); }, 120); }, {passive:true});
 
-    const linkButtons = Array.from(document.querySelectorAll('.link-btn'));
-    linkButtons.forEach((el,i)=>{ el.addEventListener('pointerdown', ()=> el.classList.add('active'), {passive:true}); el.addEventListener('pointerup', ()=> el.classList.remove('active')); el.addEventListener('pointercancel', ()=> el.classList.remove('active')); el.addEventListener('pointerleave', ()=> el.classList.remove('active')); el.style.transitionDelay = (i*40)+'ms'; });
+    // errors
+    window.addEventListener('error', ()=>{ try{ const splash = document.getElementById('splashScreen'); if(splash) splash.style.display='none'; revealUI(); }catch(e){} });
+    window.addEventListener('unhandledrejection', ()=>{ revealUI(); });
 
-    window.addEventListener('error', (ev) => { try{ const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } revealUI(); }catch(e){} });
-    window.addEventListener('unhandledrejection', (ev) => { console.error('unhandledrejection', ev.reason); revealUI(); });
+    // init
+    resizeBubbleCanvas(); // do not start loop until click
 
-    // initialize canvas size but DO NOT start bubble loop until user clicks
-    resizeBubbleCanvas();
-
-    // debug inspector
-    window.__dbgState = function(){ return { uiRevealed, animationsStarted, bubbleLoopActive:!!bubbleRAF, playAttempted, video: (document.getElementById('bgVideo')?{paused:document.getElementById('bgVideo').paused, muted:document.getElementById('bgVideo').muted}:null) }; };
+    // debug
+    window.__dbgState = function(){ return { uiRevealed, animationsStarted, bubbleLoopActive:!!bubbleRAF, playAttempted, bubblesCount: bubbles.length, particlesCount: particles.length, video: (document.getElementById('bgVideo')?{paused:document.getElementById('bgVideo').paused, muted:document.getElementById('bgVideo').muted}:null) }; };
   </script>
 </body>
 </html>
