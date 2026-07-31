@@ -133,8 +133,18 @@
     }
 
     /* --- State guards to prevent double-starts / multiple loops --- */
-    let siteStarted = false; // ensures startSiteAnimations runs only once
+    let uiRevealed = false;        // UI visible state
+    let animationsStarted = false; // animations (spider/avatar) started
     let bubbleRAF = null; // rAF id for bubble loop
+
+    /* Helper to reveal UI (idempotent) */
+    function revealUI(){
+      if(uiRevealed) return;
+      uiRevealed = true;
+      document.body.classList.add('site-started');
+      const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row');
+      toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; });
+    }
 
     /* --- Bubble canvas (refined) --- */
     const bubbleCanvas = document.getElementById('bubbleCanvas');
@@ -261,17 +271,29 @@
     function revealBio(el, text){ el.textContent = text; el.classList.add('in'); }
 
     async function startSiteAnimations(){
-      if(siteStarted) return; siteStarted = true;
-      const avatarPromise = animateAvatarToss();
-      const children = [document.querySelector('.profile-row'), document.getElementById('linksGrid')];
-      let delay = 80;
-      for(const ch of children){ if(!ch) continue; ch.classList.add('fall'); setTimeout(()=>ch.classList.add('in'), delay); delay += 140; }
+      if(animationsStarted) return; // guard so animations (spider/avatar) run only once
+      animationsStarted = true;
 
-      const nameEl = document.getElementById('nameEl');
-      await spiderCrawlAndReveal(nameEl, nameText, 1200);
-      revealBio(document.getElementById('bioEl'), bioText);
-      document.body.classList.add('site-started');
-      await avatarPromise;
+      try{
+        // Avatar toss can run concurrently
+        const avatarPromise = animateAvatarToss();
+
+        // Spider crawl + name reveal (keeps spider pinned)
+        const nameEl = document.getElementById('nameEl');
+        await spiderCrawlAndReveal(nameEl, nameText, 1200);
+
+        // Bio reveal
+        revealBio(document.getElementById('bioEl'), bioText);
+
+        // ensure body state
+        document.body.classList.add('site-started');
+
+        await avatarPromise;
+      }catch(err){
+        console.error('startSiteAnimations error:', err);
+        // ensure UI visible on failure
+        revealUI();
+      }
     }
 
     /* Visibility and motion handling */
@@ -279,13 +301,19 @@
       if(document.hidden){ stopBubbleLoop(); } else { if(!prefersReducedMotion) startBubbleLoop(); }
     });
 
-    if(prefersReducedMotion){ bubbles.length = 0; const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } document.body.classList.add('site-started'); document.querySelectorAll('.fall').forEach(ch=>{ ch.classList.remove('fall'); ch.classList.add('in'); }); }
+    if(prefersReducedMotion){ bubbles.length = 0; const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } revealUI(); }
 
     /* Overlay click */
     const splash = document.getElementById('splashScreen'); const video = document.getElementById('bgVideo');
     splash.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      if(siteStarted) return; // prevent double start on repeated clicks
+      // reveal UI immediately so it never stays hidden
+      revealUI();
+
+      // start bubble loop if needed
+      if(!prefersReducedMotion) startBubbleLoop();
+
+      // resume audio context to increase the chance browsers allow audio
       try{ await ensureAudioContextAndResume(); }catch(e){}
 
       if(video){
@@ -298,14 +326,20 @@
         }
       }
 
+      // hide splash quickly
       splash.classList.add('overlay-hidden'); setTimeout(()=>{ splash.style.display = 'none'; }, 520);
+
+      // start animated sequences (spider/avatar) but don't re-run reveal
       try{ startSiteAnimations(); }catch(err){ console.error('startSiteAnimations error', err); }
     }, {passive:false});
 
     /* Pointer handlers */
     window.addEventListener('pointerdown', handlePointerDown, {passive:true});
     if(!isTouch){ window.addEventListener('mousemove', onPointerMove, {passive:true}); window.addEventListener('mouseleave', onPointerLeave, {passive:true}); }
-    window.addEventListener('resize', ()=>{ resizeBubbleCanvas(); }, {passive:true});
+
+    // debounce resize to avoid layout thrash
+    let resizeTimer = null;
+    window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer = setTimeout(()=>{ resizeBubbleCanvas(); }, 120); }, {passive:true});
 
     /* Button feedback */
     const linkButtons = Array.from(document.querySelectorAll('.link-btn'));
@@ -319,26 +353,25 @@
 
     /* Errors: ensure content is visible */
     window.addEventListener('error', (ev) => {
-      try{ const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } document.body.classList.add('site-started'); const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row'); toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; }); const nameEl = document.getElementById('nameEl'); if(nameEl && nameEl.textContent.trim()==='') nameEl.textContent='AFFLY'; const bioEl = document.getElementById('bioEl'); if(bioEl && bioEl.textContent.trim()==='') bioEl.textContent='Trying to survive another boring day.....'; }catch(e){}
+      try{ const splash = document.getElementById('splashScreen'); if(splash) { splash.style.display='none'; } revealUI(); }catch(e){}
     });
+    window.addEventListener('unhandledrejection', (ev) => { console.error('unhandledrejection', ev.reason); revealUI(); });
 
     /* Start loops */
     resizeBubbleCanvas(); if(!prefersReducedMotion) startBubbleLoop();
 
     /* Accessibility: Enter to remove overlay */
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !siteStarted && !splash.classList.contains('overlay-hidden')){ splash.click(); } });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !uiRevealed && !splash.classList.contains('overlay-hidden')){ splash.click(); } });
 
     /* Auto-enter fallback: reveal UI only (do not start audio/complex animations)
        This prevents accidental multiple starts on refresh and ensures deterministic state */
     setTimeout(()=>{
       try{
-        if(splash && !splash.classList.contains('overlay-hidden') && !siteStarted){
+        if(splash && !splash.classList.contains('overlay-hidden') && !uiRevealed){
           // Reveal the UI without starting the audio-dependent animations
           splash.classList.add('overlay-hidden');
           setTimeout(()=>{ splash.style.display='none'; },520);
-          document.body.classList.add('site-started');
-          const toShow = document.querySelectorAll('.fall, .name, .bio, .links-grid, .profile-row');
-          toShow.forEach(el=>{ el.classList.remove('fall'); el.classList.add('in'); el.style.opacity = 1; el.style.transform = 'none'; });
+          revealUI();
         }
       }catch(e){}
     }, 900);
